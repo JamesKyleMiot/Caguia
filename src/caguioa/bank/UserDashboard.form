@@ -40,7 +40,7 @@
     <Container class="javax.swing.JPanel" name="jPanel1">
       <Properties>
         <Property name="background" type="java.awt.Color" editor="org.netbeans.beaninfo.editors.ColorEditor">
-          <Color blue="33" green="0" red="0" type="rgb"/>
+          <Color blue="33" green="66" red="0" type="rgb"/>
         </Property>
       </Properties>
 
@@ -61,7 +61,6 @@
                                   <Component id="WithdrawBtn" min="-2" pref="195" max="-2" attributes="0"/>
                                   <Component id="LoanBtn" alignment="0" min="-2" pref="195" max="-2" attributes="0"/>
                               </Group>
-                              <Component id="LogoutBtn" alignment="0" min="-2" max="-2" attributes="0"/>
                           </Group>
                           <Component id="DepositBtn" min="-2" pref="195" max="-2" attributes="0"/>
                       </Group>
@@ -89,9 +88,7 @@
                   <Component id="CheckBalanceBtn" min="-2" pref="30" max="-2" attributes="0"/>
                   <EmptySpace type="separate" max="-2" attributes="0"/>
                   <Component id="ViewSavingsBtn" min="-2" pref="30" max="-2" attributes="0"/>
-                  <EmptySpace pref="82" max="32767" attributes="0"/>
-                  <Component id="LogoutBtn" min="-2" max="-2" attributes="0"/>
-                  <EmptySpace min="-2" pref="32" max="-2" attributes="0"/>
+                  <EmptySpace pref="137" max="32767" attributes="0"/>
               </Group>
           </Group>
         </DimensionLayout>
@@ -99,6 +96,9 @@
       <SubComponents>
         <Component class="javax.swing.JButton" name="DepositBtn">
           <Properties>
+            <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
+              <Font name="Segoe UI" size="12" style="1"/>
+            </Property>
             <Property name="text" type="java.lang.String" value="Deposit"/>
           </Properties>
           <Events>
@@ -107,6 +107,9 @@
         </Component>
         <Component class="javax.swing.JButton" name="WithdrawBtn">
           <Properties>
+            <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
+              <Font name="Segoe UI" size="12" style="1"/>
+            </Property>
             <Property name="text" type="java.lang.String" value="Withdraw"/>
           </Properties>
           <Events>
@@ -115,6 +118,9 @@
         </Component>
         <Component class="javax.swing.JButton" name="LoanBtn">
           <Properties>
+            <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
+              <Font name="Segoe UI" size="12" style="1"/>
+            </Property>
             <Property name="text" type="java.lang.String" value="Loan"/>
           </Properties>
           <Events>
@@ -123,22 +129,20 @@
         </Component>
         <Component class="javax.swing.JButton" name="TransactionBtn">
           <Properties>
+            <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
+              <Font name="Segoe UI" size="12" style="1"/>
+            </Property>
             <Property name="text" type="java.lang.String" value="All Information"/>
           </Properties>
           <Events>
             <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="TransactionBtnActionPerformed"/>
           </Events>
         </Component>
-        <Component class="javax.swing.JButton" name="LogoutBtn">
-          <Properties>
-            <Property name="text" type="java.lang.String" value="Logout"/>
-          </Properties>
-          <Events>
-            <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="LogoutBtnActionPerformed"/>
-          </Events>
-        </Component>
         <Component class="javax.swing.JButton" name="TransferSavingsBtn">
           <Properties>
+            <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
+              <Font name="Segoe UI" size="12" style="1"/>
+            </Property>
             <Property name="text" type="java.lang.String" value="Transfer Savings"/>
           </Properties>
           <Events>
@@ -147,6 +151,9 @@
         </Component>
         <Component class="javax.swing.JButton" name="WithdrawSavingsBtn">
           <Properties>
+            <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
+              <Font name="Segoe UI" size="12" style="1"/>
+            </Property>
             <Property name="text" type="java.lang.String" value="Withdraw Savings"/>
           </Properties>
           <Events>
@@ -155,6 +162,9 @@
         </Component>
         <Component class="javax.swing.JButton" name="ViewSavingsBtn">
           <Properties>
+            <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
+              <Font name="Segoe UI" size="12" style="1"/>
+            </Property>
             <Property name="text" type="java.lang.String" value="View Savings"/>
           </Properties>
           <Events>
@@ -163,6 +173,9 @@
         </Component>
         <Component class="javax.swing.JButton" name="CheckBalanceBtn">
           <Properties>
+            <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
+              <Font name="Segoe UI" size="12" style="1"/>
+            </Property>
             <Property name="text" type="java.lang.String" value="Check Balance"/>
           </Properties>
           <Events>

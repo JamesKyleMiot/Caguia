@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
   fullname VARCHAR(255) NOT NULL,
   email VARCHAR(255) UNIQUE,
   password VARCHAR(255),
+  pin VARCHAR(255),
   balance DOUBLE DEFAULT 0,
   savings DOUBLE DEFAULT 0,
   total_deposit DOUBLE DEFAULT 0,
@@ -83,9 +84,39 @@ CREATE TABLE IF NOT EXISTS user_messages (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- minimal index suggestions
-CREATE INDEX IF NOT EXISTS idx_loans_userid ON loans(user_id);
-CREATE INDEX IF NOT EXISTS idx_messages_userid ON user_messages(user_id);
+-- PIN reset requests table
+CREATE TABLE IF NOT EXISTS pin_reset_requests (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  status VARCHAR(50) DEFAULT 'pending',
+  admin_id INT,
+  admin_response VARCHAR(255),
+  otp VARCHAR(10),
+  otp_generated_at TIMESTAMP NULL,
+  otp_verified BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  reviewed_at TIMESTAMP NULL,
+  expires_at TIMESTAMP NULL,
+  completed_at TIMESTAMP NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- password reset requests table (if not already exists)
+CREATE TABLE IF NOT EXISTS password_reset_requests (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  email VARCHAR(255),
+  phone VARCHAR(20),
+  status VARCHAR(50) DEFAULT 'pending',
+  admin_id INT,
+  admin_response VARCHAR(255),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  reviewed_at TIMESTAMP NULL,
+  expires_at TIMESTAMP NULL,
+  completed_at TIMESTAMP NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
 
 -- End of schema
 -- Flow notes:

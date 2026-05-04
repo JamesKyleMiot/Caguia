@@ -247,6 +247,14 @@ public class UserDashboard extends javax.swing.JFrame {
         refreshBtn.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
         refreshBtn.addActionListener(evt -> refreshLiveDashboard());
 
+        JButton resetPINBtn = new JButton("🔐 Reset PIN");
+        resetPINBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
+        resetPINBtn.setBackground(new Color(255, 152, 0));
+        resetPINBtn.setForeground(Color.WHITE);
+        resetPINBtn.setFocusPainted(false);
+        resetPINBtn.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
+        resetPINBtn.addActionListener(evt -> handlePINReset());
+
         JButton logoutBtn = new JButton("Logout");
         logoutBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
         logoutBtn.setBackground(new Color(0, 0, 51));
@@ -256,6 +264,7 @@ public class UserDashboard extends javax.swing.JFrame {
         logoutBtn.addActionListener(evt -> logoutToSignInUsers());
 
         headerActions.add(refreshBtn);
+        headerActions.add(resetPINBtn);
         headerActions.add(logoutBtn);
         header.add(headerActions, BorderLayout.EAST);
 
@@ -600,18 +609,17 @@ public class UserDashboard extends javax.swing.JFrame {
         WithdrawBtn = new javax.swing.JButton();
         LoanBtn = new javax.swing.JButton();
         TransactionBtn = new javax.swing.JButton();
-        LogoutBtn = new javax.swing.JButton();
         TransferSavingsBtn = new javax.swing.JButton();
         WithdrawSavingsBtn = new javax.swing.JButton();
         ViewSavingsBtn = new javax.swing.JButton();
         CheckBalanceBtn = new javax.swing.JButton();
-        LoanStatusBtn = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("UserDashboard");
 
-        jPanel1.setBackground(new java.awt.Color(0, 0, 51));
+        jPanel1.setBackground(new java.awt.Color(0, 102, 51));
 
+        DepositBtn.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
         DepositBtn.setText("Deposit");
         DepositBtn.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -619,6 +627,7 @@ public class UserDashboard extends javax.swing.JFrame {
             }
         });
 
+        WithdrawBtn.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
         WithdrawBtn.setText("Withdraw");
         WithdrawBtn.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -626,6 +635,7 @@ public class UserDashboard extends javax.swing.JFrame {
             }
         });
 
+        LoanBtn.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
         LoanBtn.setText("Loan");
         LoanBtn.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -633,20 +643,15 @@ public class UserDashboard extends javax.swing.JFrame {
             }
         });
 
-        TransactionBtn.setText("Profile");
+        TransactionBtn.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
+        TransactionBtn.setText("All Information");
         TransactionBtn.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 TransactionBtnActionPerformed(evt);
             }
         });
 
-        LogoutBtn.setText("Logout");
-        LogoutBtn.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                LogoutBtnActionPerformed(evt);
-            }
-        });
-
+        TransferSavingsBtn.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
         TransferSavingsBtn.setText("Transfer Savings");
         TransferSavingsBtn.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -654,6 +659,7 @@ public class UserDashboard extends javax.swing.JFrame {
             }
         });
 
+        WithdrawSavingsBtn.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
         WithdrawSavingsBtn.setText("Withdraw Savings");
         WithdrawSavingsBtn.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -661,6 +667,7 @@ public class UserDashboard extends javax.swing.JFrame {
             }
         });
 
+        ViewSavingsBtn.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
         ViewSavingsBtn.setText("View Savings");
         ViewSavingsBtn.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -668,17 +675,11 @@ public class UserDashboard extends javax.swing.JFrame {
             }
         });
 
+        CheckBalanceBtn.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
         CheckBalanceBtn.setText("Check Balance");
         CheckBalanceBtn.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 CheckBalanceBtnActionPerformed(evt);
-            }
-        });
-
-        LoanStatusBtn.setText("Loan Status");
-        LoanStatusBtn.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                LoanStatusBtnActionPerformed(evt);
             }
         });
 
@@ -692,15 +693,13 @@ public class UserDashboard extends javax.swing.JFrame {
                     .addComponent(CheckBalanceBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 195, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addComponent(ViewSavingsBtn, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 195, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addComponent(LoanStatusBtn, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 195, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addComponent(WithdrawSavingsBtn, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 195, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addComponent(TransferSavingsBtn, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 195, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                             .addComponent(TransactionBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 195, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                 .addComponent(WithdrawBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 195, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addComponent(LoanBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 195, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addComponent(LogoutBtn, javax.swing.GroupLayout.Alignment.LEADING))
+                                .addComponent(LoanBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 195, javax.swing.GroupLayout.PREFERRED_SIZE)))
                         .addComponent(DepositBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 195, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap(17, Short.MAX_VALUE))
         );
@@ -722,12 +721,8 @@ public class UserDashboard extends javax.swing.JFrame {
                 .addGap(21, 21, 21)
                 .addComponent(CheckBalanceBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
-                .addComponent(LoanStatusBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
                 .addComponent(ViewSavingsBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 82, Short.MAX_VALUE)
-                .addComponent(LogoutBtn)
-                .addGap(32, 32, 32))
+                .addContainerGap(137, Short.MAX_VALUE))
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -1646,9 +1641,59 @@ try {
         dispose();
     }
 
-    private void LogoutBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_LogoutBtnActionPerformed
-        logoutToSignInUsers();
-    }//GEN-LAST:event_LogoutBtnActionPerformed
+    private void handlePINReset() {
+        try {
+            // Check if user has an approved PIN reset request
+            int requestId = PINResetManager.getApprovedRequestId(Session.userId);
+            
+            if (requestId == -1) {
+                // No approved request - offer to submit one
+                int option = JOptionPane.showConfirmDialog(this,
+                    "You don't have an approved PIN reset request.\n\n" +
+                    "Would you like to submit a request to the admin?\n" +
+                    "The admin will review and approve your request.",
+                    "No Approved Request",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.INFORMATION_MESSAGE);
+                
+                if (option == JOptionPane.YES_OPTION) {
+                    String email = JOptionPane.showInputDialog(this, "Enter your email address:", "");
+                    if (email != null && !email.trim().isEmpty()) {
+                        if (!isValidEmail(email)) {
+                            JOptionPane.showMessageDialog(this, "❌ Please enter a valid email address.", "Invalid Email", JOptionPane.ERROR_MESSAGE);
+                            return;
+                        }
+                        
+                        if (PINResetManager.hasPendingRequest(Session.userId)) {
+                            JOptionPane.showMessageDialog(this, "❌ You already have a pending PIN reset request.", "Pending Request", JOptionPane.WARNING_MESSAGE);
+                            return;
+                        }
+                        
+                        if (PINResetManager.submitPINResetRequest(Session.userId, email)) {
+                            JOptionPane.showMessageDialog(this,
+                                "PIN reset request submitted successfully!\n\n" +
+                                "The admin will review your request shortly.\n" +
+                                "Check back once approved to reset your PIN.",
+                                "Request Submitted",
+                                JOptionPane.INFORMATION_MESSAGE);
+                        } else {
+                            JOptionPane.showMessageDialog(this, "Failed to submit request.", "Error", JOptionPane.ERROR_MESSAGE);
+                        }
+                    }
+                }
+            } else {
+                // Approved request exists - allow PIN reset
+                new ResetPINDialog(this, Session.userId, requestId).setVisible(true);
+                refreshLiveDashboard();
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private boolean isValidEmail(String email) {
+        return email.matches("^[A-Za-z0-9+_.-]+@(.+)$");
+    }
 
     private void CheckBalanceBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CheckBalanceBtnActionPerformed
         showAllBalancesDialog();
@@ -1755,8 +1800,6 @@ try {
     private javax.swing.JButton CheckBalanceBtn;
     private javax.swing.JButton DepositBtn;
     private javax.swing.JButton LoanBtn;
-    private javax.swing.JButton LoanStatusBtn;
-    private javax.swing.JButton LogoutBtn;
     private javax.swing.JButton TransactionBtn;
     private javax.swing.JButton TransferSavingsBtn;
     private javax.swing.JButton ViewSavingsBtn;

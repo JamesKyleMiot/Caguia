@@ -35,6 +35,9 @@ public class AdminDashboard extends javax.swing.JFrame {
     private JTable allUsersTable;
     private JTable allTransactionsTable;
     private JTable allLoansTable;
+    private JTable pinResetRequestsTable;
+    private DefaultTableModel pinResetTableModel;
+    private JLabel pinResetCountLabel;
 
     public AdminDashboard() {
         initComponents();
@@ -184,7 +187,6 @@ public class AdminDashboard extends javax.swing.JFrame {
 
         JScrollPane loansScroll = new JScrollPane(allLoansTable);
         loansScroll.setBorder(BorderFactory.createTitledBorder("All Loans"));
-        tabbedPane.addTab("Loans", loansScroll);
 
         // Loan controls panel (change status, message borrower)
         JPanel loanControlsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 6));
@@ -209,7 +211,7 @@ public class AdminDashboard extends javax.swing.JFrame {
         loansWrapper.setOpaque(false);
         loansWrapper.add(loanControlsPanel, BorderLayout.NORTH);
         loansWrapper.add(loansScroll, BorderLayout.CENTER);
-        tabbedPane.setComponentAt(tabbedPane.indexOfComponent(loansScroll), loansWrapper);
+        tabbedPane.addTab("Loans", loansWrapper);
 
         // All Transactions Table
         allTransactionsTable = new JTable();
@@ -226,6 +228,9 @@ public class AdminDashboard extends javax.swing.JFrame {
         JScrollPane transactionsScroll = new JScrollPane(allTransactionsTable);
         transactionsScroll.setBorder(BorderFactory.createTitledBorder("All Transactions"));
         tabbedPane.addTab("Transactions", transactionsScroll);
+
+        // PIN Reset Requests Tab
+        tabbedPane.addTab("🔐 PIN Resets", createPINResetTab());
 
         JPanel content = new JPanel(new BorderLayout(12, 12));
         content.setOpaque(false);
@@ -271,6 +276,11 @@ public class AdminDashboard extends javax.swing.JFrame {
         dialog.setVisible(true);
         // Refresh dashboard after closing the dialog
         refreshAdminDashboard();
+    }
+
+    private void openPINResetRequestsDialog() {
+        PINResetRequestDialog dialog = new PINResetRequestDialog(this);
+        dialog.setVisible(true);
     }
 
     private void showAdminDetailsDialog() {
@@ -369,6 +379,9 @@ public class AdminDashboard extends javax.swing.JFrame {
             allLoansTable.setModel(buildTableModel(con,
                 "SELECT l.id, l.user_id, u.username, l.amount, l.interest_rate, l.total_payable, l.status, l.created_at "
                 + "FROM loans l LEFT JOIN users u ON l.user_id = u.id ORDER BY l.id DESC"));
+
+            // Load PIN reset requests
+            loadPINRequests();
 
         } catch (Exception e) {
             System.out.println(e);
@@ -486,6 +499,167 @@ public class AdminDashboard extends javax.swing.JFrame {
         }
 
         return model;
+    }
+
+    private JPanel createPINResetTab() {
+        JPanel panel = new JPanel(new BorderLayout(12, 12));
+        panel.setBorder(new EmptyBorder(12, 12, 12, 12));
+        panel.setBackground(new Color(240, 248, 245));
+
+        // Header with count
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setOpaque(false);
+        
+        JLabel titleLabel = new JLabel("PIN Reset Requests Management");
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 16));
+        titleLabel.setForeground(new Color(34, 139, 34));
+        
+        pinResetCountLabel = new JLabel("Pending: 0");
+        pinResetCountLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
+        pinResetCountLabel.setForeground(new Color(220, 53, 69));
+        
+        headerPanel.add(titleLabel, BorderLayout.WEST);
+        headerPanel.add(pinResetCountLabel, BorderLayout.EAST);
+
+        // Table
+        pinResetTableModel = new DefaultTableModel(
+            new String[]{"ID", "Username", "Full Name", "Email", "Status", "Requested", "Admin Response"},
+            0
+        ) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        
+        pinResetRequestsTable = new JTable(pinResetTableModel);
+        pinResetRequestsTable.setRowHeight(26);
+        pinResetRequestsTable.setShowGrid(true);
+        pinResetRequestsTable.setGridColor(new Color(188, 226, 158));
+        pinResetRequestsTable.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        pinResetRequestsTable.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 13));
+        pinResetRequestsTable.getTableHeader().setBackground(new Color(76, 175, 80));
+        pinResetRequestsTable.getTableHeader().setForeground(Color.BLACK);
+        pinResetRequestsTable.setAutoCreateRowSorter(true);
+        
+        JScrollPane scrollPane = new JScrollPane(pinResetRequestsTable);
+        scrollPane.setBorder(BorderFactory.createTitledBorder("Pending PIN Reset Requests"));
+
+        // Button Panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
+        buttonPanel.setOpaque(false);
+
+        JButton approveBtn = new JButton("✓ Approve Selected");
+        approveBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
+        approveBtn.setBackground(new Color(76, 175, 80));
+        approveBtn.setForeground(Color.WHITE);
+        approveBtn.setFocusPainted(false);
+        approveBtn.setBorder(BorderFactory.createEmptyBorder(8, 14, 8, 14));
+        approveBtn.addActionListener(e -> approvePINRequest());
+
+        JButton denyBtn = new JButton("✗ Deny Selected");
+        denyBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
+        denyBtn.setBackground(new Color(220, 53, 69));
+        denyBtn.setForeground(Color.WHITE);
+        denyBtn.setFocusPainted(false);
+        denyBtn.setBorder(BorderFactory.createEmptyBorder(8, 14, 8, 14));
+        denyBtn.addActionListener(e -> denyPINRequest());
+
+        JButton refreshBtn = new JButton("🔄 Refresh");
+        refreshBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
+        refreshBtn.setBackground(new Color(33, 150, 243));
+        refreshBtn.setForeground(Color.WHITE);
+        refreshBtn.setFocusPainted(false);
+        refreshBtn.setBorder(BorderFactory.createEmptyBorder(8, 14, 8, 14));
+        refreshBtn.addActionListener(e -> loadPINRequests());
+
+        buttonPanel.add(approveBtn);
+        buttonPanel.add(denyBtn);
+        buttonPanel.add(refreshBtn);
+
+        panel.add(headerPanel, BorderLayout.NORTH);
+        panel.add(scrollPane, BorderLayout.CENTER);
+        panel.add(buttonPanel, BorderLayout.SOUTH);
+
+        // Load initial data
+        loadPINRequests();
+
+        return panel;
+    }
+
+    private void loadPINRequests() {
+        pinResetTableModel.setRowCount(0);
+        
+        try {
+            ResultSet rs = PINResetManager.getPendingResetRequests();
+            
+            int count = 0;
+            if (rs != null) {
+                while (rs.next()) {
+                    pinResetTableModel.addRow(new Object[]{
+                        rs.getInt("id"),
+                        rs.getString("username"),
+                        rs.getString("fullname"),
+                        rs.getString("email"),
+                        rs.getString("status"),
+                        rs.getString("created_at"),
+                        rs.getString("admin_response") != null ? rs.getString("admin_response") : ""
+                    });
+                    count++;
+                }
+            }
+            pinResetCountLabel.setText("Pending: " + count);
+        } catch (Exception e) {
+            System.out.println("Error loading PIN reset requests: " + e);
+        }
+    }
+
+    private void approvePINRequest() {
+        int selectedRow = pinResetRequestsTable.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "❌ Please select a request to approve.", "No Selection", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int requestId = (int) pinResetTableModel.getValueAt(selectedRow, 0);
+        String username = (String) pinResetTableModel.getValueAt(selectedRow, 1);
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+            "Approve PIN reset request for: " + username + "?",
+            "Confirm Approval",
+            JOptionPane.YES_NO_OPTION);
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            try {
+                PINResetManager.approveRequest(requestId, Session.userId);
+                JOptionPane.showMessageDialog(this, "✓ Request approved! User can now reset their PIN.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                loadPINRequests();
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, "❌ Error approving request: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void denyPINRequest() {
+        int selectedRow = pinResetRequestsTable.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "❌ Please select a request to deny.", "No Selection", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int requestId = (int) pinResetTableModel.getValueAt(selectedRow, 0);
+        String username = (String) pinResetTableModel.getValueAt(selectedRow, 1);
+
+        String reason = JOptionPane.showInputDialog(this, "Enter reason for denial:", "Reason for Denial");
+        if (reason != null && !reason.trim().isEmpty()) {
+            try {
+                PINResetManager.denyRequest(requestId, Session.userId, reason);
+                JOptionPane.showMessageDialog(this, "✓ Request denied. User has been notified.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                loadPINRequests();
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, "❌ Error denying request: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
 
     private JPanel createInfoCard(String labelText, JLabel valueLabel, Color accentColor) {
