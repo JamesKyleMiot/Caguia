@@ -3,6 +3,7 @@ package caguioa.bank;
 import java.awt.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -12,8 +13,6 @@ import javax.swing.border.EmptyBorder;
 
 public class LoanApplicationDialog extends JDialog {
 
-    private static final double MIN_LOAN = 50000.0;
-    private static final double MAX_LOAN = 300000.0;
     private static final double INTEREST_RATE = 0.02;
     private static final int REPAYMENT_WINDOW_DAYS = 30;
 
@@ -56,6 +55,7 @@ public class LoanApplicationDialog extends JDialog {
         this.userId = userId;
 
         initializeUI();
+        loadAutoFillData();
 
         pack();
         setSize(900, 1000);
@@ -111,7 +111,7 @@ public class LoanApplicationDialog extends JDialog {
         addSectionTitle(contentPanel, "3. LOAN DETAILS", row++, gbc);
         
         addFormField(contentPanel, "Loan Amount:", amountField = new JTextField(), row++, gbc);
-        JLabel rangeLabel = new JLabel("(Allowed range: ₱50,000.00 to ₱300,000.00)");
+        JLabel rangeLabel = new JLabel("No preset limit. Admin approval is required.");
         rangeLabel.setFont(new Font("SansSerif", Font.PLAIN, 10));
         rangeLabel.setForeground(new Color(90, 90, 90));
         gbc.gridx = 1;
@@ -120,7 +120,8 @@ public class LoanApplicationDialog extends JDialog {
         contentPanel.add(rangeLabel, gbc);
         
         addFormField(contentPanel, "Loan Purpose:", loanPurposeField = new JTextField(), row++, gbc);
-        addFormField(contentPanel, "Loan Term (Months):", loanTermField = new JTextField(), row++, gbc);
+        addFormField(contentPanel, "Loan Term (Months):", loanTermField = new JTextField("6"), row++, gbc);
+        loanTermField.setEditable(false);
         
         // Section 4: Bank Information
         addSectionTitle(contentPanel, "4. BANK INFORMATION", row++, gbc);
@@ -307,9 +308,9 @@ public class LoanApplicationDialog extends JDialog {
             amountField.requestFocusInWindow();
             return;
         }
-        
-        if (requestedAmount < MIN_LOAN || requestedAmount > MAX_LOAN) {
-            JOptionPane.showMessageDialog(this, "Loan amount must be between " + formatMoney(MIN_LOAN) + " and " + formatMoney(MAX_LOAN) + ".", "Out of Range", JOptionPane.WARNING_MESSAGE);
+
+        if (requestedAmount <= 0) {
+            JOptionPane.showMessageDialog(this, "Loan amount must be greater than zero.", "Invalid Amount", JOptionPane.WARNING_MESSAGE);
             amountField.requestFocusInWindow();
             return;
         }
@@ -359,7 +360,8 @@ public class LoanApplicationDialog extends JDialog {
                 "Loan Amount: " + formatMoney(requestedAmount) + "\n" +
                 "Interest: " + formatMoney(interestCharge) + "\n" +
                 "Total Payable: " + formatMoney(totalPayable) + "\n" +
-                "Due Date: " + dueDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
+                "Due Date: " + dueDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")) + "\n" +
+                "Approval: Admin review required",
             "Confirm Loan Application",
             JOptionPane.YES_NO_OPTION
         );
@@ -451,16 +453,52 @@ public class LoanApplicationDialog extends JDialog {
             + "---------------------------------------------\n"
             + "Loan Amount: " + formatMoney(requestedAmount) + "\n"
             + "Purpose: " + loanPurposeField.getText() + "\n"
-            + "Loan Term: " + loanTermField.getText() + " months\n"
+            + "Loan Term: 6 months\n"
             + "Interest Rate: 2.00%\n"
             + "Interest Charge: " + formatMoney(interestCharge) + "\n"
             + "Total Payable: " + formatMoney(totalPayable) + "\n"
             + "Due Date: " + dueDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")) + "\n"
-            + "Status: PENDING APPROVAL\n"
+            + "Status: PENDING ADMIN APPROVAL\n"
             + "Date Applied: " + LocalDate.now().format(DateTimeFormatter.ISO_DATE) + "\n"
             + "---------------------------------------------\n"
             + "Your loan application has been submitted.\n"
             + "Please wait for approval notification.";
+    }
+
+    private void loadAutoFillData() {
+        if (Session.fullname != null && !Session.fullname.isBlank()) {
+            fullNameField.setText(Session.fullname);
+        }
+
+        try (Connection con = DB.connect();
+             PreparedStatement pst = con.prepareStatement(
+                 "SELECT fullname, email, sex, address FROM users WHERE id = ?"
+             )) {
+            pst.setInt(1, userId);
+            try (ResultSet rs = pst.executeQuery()) {
+                if (rs.next()) {
+                    String fullname = rs.getString("fullname");
+                    String email = rs.getString("email");
+                    String sex = rs.getString("sex");
+                    String address = rs.getString("address");
+
+                    if (fullname != null && !fullname.isBlank()) {
+                        fullNameField.setText(fullname);
+                    }
+                    if (email != null && !email.isBlank()) {
+                        emailField.setText(email);
+                    }
+                    if (sex != null && !sex.isBlank()) {
+                        genderCombo.setSelectedItem(sex);
+                    }
+                    if (address != null && !address.isBlank()) {
+                        addressField.setText(address);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error auto-filling loan application form: " + e);
+        }
     }
 
     private String formatMoney(double amount) {
