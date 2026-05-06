@@ -5,6 +5,7 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -230,6 +231,14 @@ public class LoanApplicationDialog extends JDialog {
 
 
     private void submitApplication() {
+        if (LoanApplicationHelper.hasPendingApplication(userId)) {
+            JOptionPane.showMessageDialog(this,
+                "You already have a pending loan application. Please wait for admin review before submitting another one.",
+                "Pending Application Exists",
+                JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
         // Validation
         if (fullNameField.getText().trim().isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please enter your full name.", "Missing Information", JOptionPane.WARNING_MESSAGE);
@@ -362,25 +371,32 @@ public class LoanApplicationDialog extends JDialog {
 
         try (Connection conn = DB.connect();
              PreparedStatement pst = conn.prepareStatement(
-                 "INSERT INTO loans (user_id, amount, interest_rate, total_payable, remaining_balance, due_date, status) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, 'active')"
+                 "INSERT INTO loan_applications (user_id, full_name, date_of_birth, gender, address, contact_number, email_address, " +
+                     "employment_status, company_name, monthly_income, work_address, loan_amount_requested, loan_purpose, loan_term_months, " +
+                     "account_number, account_type, valid_id_submitted, proof_of_income_submitted, proof_of_address_submitted, declaration_accepted, status) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')"
              )) {
             pst.setInt(1, userId);
-            pst.setDouble(2, requestedAmount);
-            pst.setDouble(3, INTEREST_RATE);
-            pst.setDouble(4, totalPayable);
-            pst.setDouble(5, remainingBalance);
-            pst.setDate(6, java.sql.Date.valueOf(dueDate));
+            pst.setString(2, fullNameField.getText().trim());
+            pst.setDate(3, java.sql.Date.valueOf(parseDateOfBirth(dateOfBirthField.getText().trim())));
+            pst.setString(4, (String) genderCombo.getSelectedItem());
+            pst.setString(5, addressField.getText().trim());
+            pst.setString(6, contactNumberField.getText().trim());
+            pst.setString(7, emailField.getText().trim());
+            pst.setString(8, (String) employmentStatusCombo.getSelectedItem());
+            pst.setString(9, companyNameField.getText().trim());
+            pst.setDouble(10, Double.parseDouble(monthlyIncomeField.getText().trim().replace(",", "")));
+            pst.setString(11, workAddressField.getText().trim());
+            pst.setDouble(12, requestedAmount);
+            pst.setString(13, loanPurposeField.getText().trim());
+            pst.setInt(14, Integer.parseInt(loanTermField.getText().trim()));
+            pst.setString(15, accountNumberField.getText().trim());
+            pst.setString(16, (String) accountTypeCombo.getSelectedItem());
+            pst.setBoolean(17, validIDCheckbox.isSelected());
+            pst.setBoolean(18, proofOfIncomeCheckbox.isSelected());
+            pst.setBoolean(19, proofOfAddressCheckbox.isSelected());
+            pst.setBoolean(20, declarationCheckbox.isSelected());
             pst.executeUpdate();
-
-            try (PreparedStatement transactionStmt = conn.prepareStatement(
-                    "INSERT INTO transactions (user_id, type, amount, method) VALUES (?, ?, ?, ?)")) {
-                transactionStmt.setInt(1, userId);
-                transactionStmt.setString(2, "Loan Disbursement");
-                transactionStmt.setDouble(3, totalPayable);
-                transactionStmt.setString(4, "Loan Application");
-                transactionStmt.executeUpdate();
-            }
 
             String receipt = buildReceipt(requestedAmount, interestCharge, totalPayable, dueDate);
             JTextArea receiptArea = new JTextArea(receipt);
@@ -393,7 +409,14 @@ public class LoanApplicationDialog extends JDialog {
             JOptionPane.showMessageDialog(
                 this,
                 new JScrollPane(receiptArea),
-                "Loan Submitted",
+                "Application Submitted",
+                JOptionPane.INFORMATION_MESSAGE
+            );
+
+            JOptionPane.showMessageDialog(
+                this,
+                "Your loan application has been sent to the admin for review.\nYou will be notified after it is approved or rejected.",
+                "Pending Admin Review",
                 JOptionPane.INFORMATION_MESSAGE
             );
 
@@ -404,6 +427,11 @@ public class LoanApplicationDialog extends JDialog {
                 "Error",
                 JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    private LocalDate parseDateOfBirth(String value) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+        return LocalDate.parse(value, formatter);
     }
 
     private String buildReceipt(double requestedAmount, double interestCharge, double totalPayable, LocalDate dueDate) {
