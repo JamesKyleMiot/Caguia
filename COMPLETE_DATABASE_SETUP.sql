@@ -186,4 +186,13 @@ ORDER BY TABLE_NAME;
 -- Total Tables: 8
 -- Total Relationships: 8
 -- All Foreign Keys: Configured with CASCADE DELETE
+-- 
+-- OTP PIN RESET SYSTEM FIELDS:
+-- pin_reset_requests table has:
+--   ✓ otp VARCHAR(10) - stores 6-digit OTP
+--   ✓ otp_generated_at TIMESTAMP - when OTP created
+--   ✓ otp_verified BOOLEAN - whether user verified OTP
+--   ✓ Expires automatically after 10 minutes (checked in code)
+-- 
+-- READY FOR DEPLOYMENT
 -- ============================================================

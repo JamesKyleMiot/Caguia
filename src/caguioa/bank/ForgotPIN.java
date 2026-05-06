@@ -1,8 +1,8 @@
 package caguioa.bank;
 
+import java.awt.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import java.awt.*;
 
 public class ForgotPIN extends JDialog {
     
@@ -40,8 +40,10 @@ public class ForgotPIN extends JDialog {
             "<b>To reset your PIN:</b><br>" +
             "1. Enter your email address below<br>" +
             "2. Submit the request<br>" +
-            "3. Wait for admin approval<br>" +
-            "4. Once approved, you will be able to set a new PIN<br>" +
+            "3. You will receive a 6-digit OTP via email<br>" +
+            "4. Enter the OTP to verify your identity<br>" +
+            "5. Set your new PIN<br>" +
+            "<b style='color:red'>Note: OTP expires after 10 minutes</b><br>" +
             "</html>"
         );
         instructionLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
@@ -143,16 +145,18 @@ public class ForgotPIN extends JDialog {
         statusLabel.setForeground(Color.BLUE);
 
         if (PINResetManager.submitPINResetRequest(userId, email)) {
-            statusLabel.setText("✓ Request submitted successfully! Admin will review shortly.");
+            statusLabel.setText("✓ OTP sent to your email! Expires in 10 minutes.");
             statusLabel.setForeground(new Color(34, 139, 34));
             
             JOptionPane.showMessageDialog(this,
-                "PIN reset request submitted successfully!\n\n" +
+                "✓ PIN reset request submitted successfully!\n\n" +
                 "Email: " + email + "\n\n" +
-                "Please wait for admin approval. Once approved,\n" +
-                "you will be able to change your PIN.\n\n" +
-                "Thank you for your patience!",
-                "Request Submitted",
+                "A 6-digit OTP has been sent to your email.\n" +
+                "OTP expires after 10 minutes.\n\n" +
+                "Check your inbox and enter the OTP to\n" +
+                "proceed with changing your PIN.\n\n" +
+                "If you don't see the email, check your spam folder.",
+                "OTP Sent Successfully",
                 JOptionPane.INFORMATION_MESSAGE);
             
             // Close after successful submission

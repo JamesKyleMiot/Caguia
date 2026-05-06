@@ -5,28 +5,54 @@ import java.sql.*;
 public class PINResetManager {
 
     /**
-     * Submit a PIN reset request
+     * Submit a PIN reset request - IMMEDIATELY GENERATES AND SENDS OTP
      * @param userId User requesting PIN reset
-     * @param email Email address for contact
-     * @return true if request submitted successfully
+     * @param email Email address for OTP delivery
+     * @return true if OTP sent successfully
      */
     public static boolean submitPINResetRequest(int userId, String email) {
-        String sql = "INSERT INTO pin_reset_requests (user_id, email, status) " +
-                     "VALUES (?, ?, 'pending')";
+        String getUsernameSql = "SELECT username FROM users WHERE id = ?";
         
         try (Connection conn = DB.connect();
-             PreparedStatement pst = conn.prepareStatement(sql)) {
+             PreparedStatement getUsernameStmt = conn.prepareStatement(getUsernameSql)) {
             
-            pst.setInt(1, userId);
-            pst.setString(2, email.trim());
+            // Get username from users table
+            getUsernameStmt.setInt(1, userId);
+            ResultSet userRs = getUsernameStmt.executeQuery();
+            String username = "User";
+            if (userRs.next()) {
+                username = userRs.getString("username");
+            }
             
-            pst.executeUpdate();
-            return true;
+            // Insert request with status 'approved' (no admin needed)
+            String insertSql = "INSERT INTO pin_reset_requests (user_id, email, status) " +
+                             "VALUES (?, ?, 'approved')";
+            
+            try (PreparedStatement insertStmt = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
+                insertStmt.setInt(1, userId);
+                insertStmt.setString(2, email.trim());
+                insertStmt.executeUpdate();
+                
+                // Get inserted request ID
+                ResultSet generatedKeys = insertStmt.getGeneratedKeys();
+                if (generatedKeys.next()) {
+                    int requestId = generatedKeys.getInt(1);
+                    
+                    // Immediately generate and send OTP
+                    String otp = generateAndSendOTP(requestId, username, email.trim());
+                    
+                    if (otp != null) {
+                        System.out.println("PIN reset request submitted. OTP sent to: " + email);
+                        return true;
+                    }
+                }
+            }
             
         } catch (Exception e) {
             System.out.println("Error submitting PIN reset request: " + e);
-            return false;
+            e.printStackTrace();
         }
+        return false;
     }
 
     /**
