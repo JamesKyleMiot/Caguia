@@ -394,8 +394,8 @@ public class AdminDashboard extends javax.swing.JFrame {
 
             // Load all transactions table (exclude details column)
             allTransactionsTable.setModel(buildTableModel(con,
-                "SELECT t.id, t.user_id, u.username, t.type, t.amount, t.method, t.created_at "
-                + "FROM transactions t LEFT JOIN users u ON t.user_id = u.id ORDER BY t.id DESC"));
+                "SELECT txn.id, txn.user_id, usr.username, txn.type, txn.amount, txn.method, txn.created_at "
+                + "FROM transactions txn LEFT JOIN users usr ON txn.user_id = usr.id ORDER BY txn.id DESC"));
 
             // Load all loans table (full loan attributes with username)
             allLoansTable.setModel(buildTableModel(con,
