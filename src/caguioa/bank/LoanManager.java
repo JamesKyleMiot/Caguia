@@ -1,14 +1,14 @@
 package caguioa.bank;
 
 import java.sql.*;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class LoanManager {
 
     private static void ensureLoanSchema(Connection conn) {
-        ensureColumn(conn, "loans", "interest_rate", "ALTER TABLE loans ADD COLUMN interest_rate DOUBLE DEFAULT 0.10 AFTER amount");
+        // First, ensure the loans table exists
+        ensureLoanTableExists(conn);
+        ensureColumn(conn, "loans", "interest_rate", "ALTER TABLE loans ADD COLUMN interest_rate DOUBLE DEFAULT 0.02 AFTER amount");
         ensureColumn(conn, "loans", "total_payable", "ALTER TABLE loans ADD COLUMN total_payable DOUBLE AFTER interest_rate");
         ensureColumn(conn, "loans", "remaining_balance", "ALTER TABLE loans ADD COLUMN remaining_balance DOUBLE DEFAULT 0 AFTER total_payable");
         ensureColumn(conn, "loans", "due_date", "ALTER TABLE loans ADD COLUMN due_date DATE NULL AFTER remaining_balance");
@@ -21,6 +21,15 @@ public class LoanManager {
         ensureColumn(conn, "loans", "is_account_blocked", "ALTER TABLE loans ADD COLUMN is_account_blocked BOOLEAN DEFAULT FALSE AFTER promissory_note_url");
         ensureColumn(conn, "loans", "blocked_date", "ALTER TABLE loans ADD COLUMN blocked_date TIMESTAMP NULL AFTER is_account_blocked");
         ensureColumn(conn, "loans", "created_at", "ALTER TABLE loans ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP AFTER blocked_date");
+        
+        // Ensure loan_payments table has transaction_id column
+        ensureColumn(conn, "loan_payments", "transaction_id", "ALTER TABLE loan_payments ADD COLUMN transaction_id INT NULL AFTER transaction_reference");
+        
+        // Ensure loan_applications table has all required columns
+        ensureColumn(conn, "loan_applications", "full_name", "ALTER TABLE loan_applications ADD COLUMN full_name VARCHAR(255) NULL AFTER rejection_reason");
+        ensureColumn(conn, "loan_applications", "employment_status", "ALTER TABLE loan_applications ADD COLUMN employment_status VARCHAR(50) NULL AFTER full_name");
+        ensureColumn(conn, "loan_applications", "monthly_income", "ALTER TABLE loan_applications ADD COLUMN monthly_income DOUBLE NULL AFTER employment_status");
+        ensureColumn(conn, "loan_applications", "loan_term_months", "ALTER TABLE loan_applications ADD COLUMN loan_term_months INT NULL AFTER monthly_income");
 
         // Backfill remaining balance for old active rows after column migrations.
         try (PreparedStatement pst = conn.prepareStatement(
@@ -29,6 +38,33 @@ public class LoanManager {
             pst.executeUpdate();
         } catch (Exception e) {
             System.out.println("Error backfilling remaining_balance: " + e);
+        }
+    }
+    
+    private static void ensureLoanTableExists(Connection conn) {
+        try (PreparedStatement pst = conn.prepareStatement(
+                "CREATE TABLE IF NOT EXISTS loans (" +
+                "  id INT AUTO_INCREMENT PRIMARY KEY," +
+                "  user_id INT NOT NULL," +
+                "  amount DOUBLE NOT NULL," +
+                "  interest_rate DOUBLE DEFAULT 0.02," +
+                "  total_payable DOUBLE," +
+                "  remaining_balance DOUBLE DEFAULT 0," +
+                "  due_date DATE," +
+                "  status VARCHAR(50) DEFAULT 'active'," +
+                "  witness_name VARCHAR(255)," +
+                "  witness_contact VARCHAR(255)," +
+                "  witness_signature LONGBLOB," +
+                "  user_signature LONGBLOB," +
+                "  promissory_note_url VARCHAR(1024)," +
+                "  is_account_blocked BOOLEAN DEFAULT FALSE," +
+                "  blocked_date TIMESTAMP NULL," +
+                "  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+                "  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE" +
+                ") ENGINE=InnoDB")) {
+            pst.executeUpdate();
+        } catch (Exception e) {
+            System.out.println("Error creating loans table: " + e);
         }
     }
 
@@ -365,4 +401,33 @@ public class LoanManager {
             return false;
         }
     }
+
+    
+    /**
+     * Get user's active loan
+     */
+    public static Map<String, Object> getUserActiveLoan(int userId) {
+        try (Connection conn = DB.connect()) {
+            String query = "SELECT id, amount, total_payable, remaining_balance, due_date, status FROM loans WHERE user_id = ? AND status = 'active' ORDER BY id DESC LIMIT 1";
+            try (PreparedStatement pst = conn.prepareStatement(query)) {
+                pst.setInt(1, userId);
+                try (ResultSet rs = pst.executeQuery()) {
+                    if (rs.next()) {
+                        Map<String, Object> loan = new HashMap<>();
+                        loan.put("id", rs.getInt("id"));
+                        loan.put("amount", rs.getDouble("amount"));
+                        loan.put("total_payable", rs.getDouble("total_payable"));
+                        loan.put("remaining_balance", rs.getDouble("remaining_balance"));
+                        loan.put("due_date", rs.getDate("due_date"));
+                        loan.put("status", rs.getString("status"));
+                        return loan;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error getting user active loan: " + e);
+        }
+        return null;
+    }
+
 }

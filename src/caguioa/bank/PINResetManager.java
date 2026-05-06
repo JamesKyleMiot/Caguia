@@ -8,9 +8,9 @@ public class PINResetManager {
      * Submit a PIN reset request - IMMEDIATELY GENERATES AND SENDS OTP
      * @param userId User requesting PIN reset
      * @param email Email address for OTP delivery
-     * @return true if OTP sent successfully
+     * @return requestId if OTP sent successfully, -1 on failure
      */
-    public static boolean submitPINResetRequest(int userId, String email) {
+    public static int submitPINResetRequest(int userId, String email) {
         String getUsernameSql = "SELECT username FROM users WHERE id = ?";
         
         try (Connection conn = DB.connect();
@@ -43,7 +43,7 @@ public class PINResetManager {
                     
                     if (otp != null) {
                         System.out.println("PIN reset request submitted. OTP sent to: " + email);
-                        return true;
+                        return requestId;  // Return the request ID
                     }
                 }
             }
@@ -52,7 +52,7 @@ public class PINResetManager {
             System.out.println("Error submitting PIN reset request: " + e);
             e.printStackTrace();
         }
-        return false;
+        return -1;  // Return -1 on failure
     }
 
     /**

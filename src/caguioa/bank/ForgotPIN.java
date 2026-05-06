@@ -38,12 +38,12 @@ public class ForgotPIN extends JDialog {
         JLabel instructionLabel = new JLabel(
             "<html>" +
             "<b>To reset your PIN:</b><br>" +
-            "1. Enter your email address below<br>" +
-            "2. Submit the request<br>" +
-            "3. You will receive a 6-digit OTP via email<br>" +
-            "4. Enter the OTP to verify your identity<br>" +
-            "5. Set your new PIN<br>" +
-            "<b style='color:red'>Note: OTP expires after 10 minutes</b><br>" +
+            "1. Enter your email address<br>" +
+            "2. Click 'Send OTP' to receive 6-digit code<br>" +
+            "3. Check your email inbox (or spam folder)<br>" +
+            "4. Enter the OTP and click 'OK'<br>" +
+            "5. Set your new 6-digit PIN<br>" +
+            "<b style='color:red'>⏱️ OTP expires after 10 minutes</b><br>" +
             "</html>"
         );
         instructionLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
@@ -87,7 +87,7 @@ public class ForgotPIN extends JDialog {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
         buttonPanel.setOpaque(false);
 
-        submitBtn = new JButton("Submit Request");
+        submitBtn = new JButton("Send OTP");
         submitBtn.setBackground(new Color(0, 102, 0));
         submitBtn.setForeground(Color.WHITE);
         submitBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
@@ -144,7 +144,9 @@ public class ForgotPIN extends JDialog {
         statusLabel.setText("Processing...");
         statusLabel.setForeground(Color.BLUE);
 
-        if (PINResetManager.submitPINResetRequest(userId, email)) {
+        int requestId = PINResetManager.submitPINResetRequest(userId, email);
+        
+        if (requestId != -1) {  // Success - got a valid requestId
             statusLabel.setText("✓ OTP sent to your email! Expires in 10 minutes.");
             statusLabel.setForeground(new Color(34, 139, 34));
             
@@ -159,10 +161,8 @@ public class ForgotPIN extends JDialog {
                 "OTP Sent Successfully",
                 JOptionPane.INFORMATION_MESSAGE);
             
-            // Close after successful submission
-            Timer timer = new Timer(2000, e -> dispose());
-            timer.setRepeats(false);
-            timer.start();
+
+            dispose();
         } else {
             statusLabel.setText("❌ Error submitting request. Please try again.");
             statusLabel.setForeground(Color.RED);

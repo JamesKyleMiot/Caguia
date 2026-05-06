@@ -34,10 +34,8 @@ public class UserDashboard extends javax.swing.JFrame {
     private JPanel dashboardPanel;
     private JLabel balanceValueLabel;
     private JLabel savingsValueLabel;
-    private JLabel depositValueLabel;
     private JLabel transactionCountValueLabel;
     private JLabel loanCountValueLabel;
-    private JLabel statusValueLabel;
     private JTable dashboardTransactionsTable;
     private JTable dashboardLoansTable;
     private JTable notificationsTable;
@@ -61,6 +59,8 @@ public class UserDashboard extends javax.swing.JFrame {
     }
 
     private Map<String, Object> getActiveLoanForCurrentUser() {
+
+
         try {
             Connection con = DB.connect();
             PreparedStatement pst = con.prepareStatement(
@@ -239,6 +239,22 @@ public class UserDashboard extends javax.swing.JFrame {
         headerActions.setOpaque(false);
 
         // Add Refresh button to header
+        JButton applyLoanBtn = new JButton("📋 Apply for Loan");
+        applyLoanBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
+        applyLoanBtn.setBackground(new Color(33, 150, 243));
+        applyLoanBtn.setForeground(Color.WHITE);
+        applyLoanBtn.setFocusPainted(false);
+        applyLoanBtn.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
+        applyLoanBtn.addActionListener(evt -> openLoanApplication());
+
+        JButton payLoanBtn = new JButton("💳 Pay Loan");
+        payLoanBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
+        payLoanBtn.setBackground(new Color(76, 175, 80));
+        payLoanBtn.setForeground(Color.WHITE);
+        payLoanBtn.setFocusPainted(false);
+        payLoanBtn.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
+        payLoanBtn.addActionListener(evt -> openLoanPayment());
+
         JButton refreshBtn = new JButton("🔄 Refresh");
         refreshBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
         refreshBtn.setBackground(new Color(76, 175, 80));
@@ -246,14 +262,6 @@ public class UserDashboard extends javax.swing.JFrame {
         refreshBtn.setFocusPainted(false);
         refreshBtn.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
         refreshBtn.addActionListener(evt -> refreshLiveDashboard());
-
-        JButton resetPINBtn = new JButton("🔐 Reset PIN");
-        resetPINBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
-        resetPINBtn.setBackground(new Color(255, 152, 0));
-        resetPINBtn.setForeground(Color.WHITE);
-        resetPINBtn.setFocusPainted(false);
-        resetPINBtn.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
-        resetPINBtn.addActionListener(evt -> handlePINReset());
 
         JButton logoutBtn = new JButton("Logout");
         logoutBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
@@ -263,27 +271,24 @@ public class UserDashboard extends javax.swing.JFrame {
         logoutBtn.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
         logoutBtn.addActionListener(evt -> logoutToSignInUsers());
 
+        headerActions.add(applyLoanBtn);
+        headerActions.add(payLoanBtn);
         headerActions.add(refreshBtn);
-        headerActions.add(resetPINBtn);
         headerActions.add(logoutBtn);
         header.add(headerActions, BorderLayout.EAST);
 
-        JPanel summaryPanel = new JPanel(new GridLayout(2, 3, 12, 12));
+        JPanel summaryPanel = new JPanel(new GridLayout(2, 2, 12, 12));
         summaryPanel.setOpaque(false);
 
         balanceValueLabel = new JLabel("₱0.00", SwingConstants.CENTER);
         savingsValueLabel = new JLabel("₱0.00", SwingConstants.CENTER);
-        depositValueLabel = new JLabel("₱0.00", SwingConstants.CENTER);
         transactionCountValueLabel = new JLabel("0", SwingConstants.CENTER);
         loanCountValueLabel = new JLabel("0", SwingConstants.CENTER);
-        statusValueLabel = new JLabel("Loading...", SwingConstants.CENTER);
 
         summaryPanel.add(createInfoCard("Current Balance", balanceValueLabel, new Color(34, 180, 100)));
         summaryPanel.add(createInfoCard("Savings", savingsValueLabel, new Color(46, 204, 113)));
-        summaryPanel.add(createInfoCard("Total Deposit", depositValueLabel, new Color(76, 175, 80)));
         summaryPanel.add(createInfoCard("Transactions", transactionCountValueLabel, new Color(56, 142, 60)));
         summaryPanel.add(createInfoCard("Loans", loanCountValueLabel, new Color(27, 94, 32)));
-        summaryPanel.add(createInfoCard("Status", statusValueLabel, new Color(129, 199, 132)));
 
         dashboardTransactionsTable = new JTable();
         dashboardTransactionsTable.setRowHeight(26);
@@ -311,13 +316,8 @@ public class UserDashboard extends javax.swing.JFrame {
         dashboardLoansTable.getTableHeader().setReorderingAllowed(false);
         dashboardLoansTable.setAutoCreateRowSorter(true);
 
-        JScrollPane loansScroll = new JScrollPane(dashboardLoansTable);
-        loansScroll.setBorder(BorderFactory.createTitledBorder("All User Loans"));
-        loansScroll.getViewport().setBackground(new Color(245, 252, 250));
-
         JTabbedPane mainTabs = new JTabbedPane();
         mainTabs.addTab("Transactions", transactionScroll);
-        mainTabs.addTab("Loans", loansScroll);
 
         // Notifications table (admin -> user)
         notificationsTable = new JTable();
@@ -409,24 +409,18 @@ public class UserDashboard extends javax.swing.JFrame {
 
             balanceValueLabel.setText(formatMoney(balance));
             savingsValueLabel.setText(formatMoney(savings));
-            depositValueLabel.setText(formatMoney(totalDeposit));
             transactionCountValueLabel.setText(String.valueOf(totalTransactions));
             loanCountValueLabel.setText(String.valueOf(totalLoans));
-            statusValueLabel.setText(totalDeposit >= 50000 ? "Loan Ready" : "Build Deposits");
 
             dashboardTransactionsTable.setModel(buildTableModel(
                 con,
-                "SELECT id, user_id, type, amount, method, created_at FROM transactions WHERE user_id=? ORDER BY id DESC",
+                "SELECT user_id, type, amount, method, created_at FROM transactions WHERE user_id=? ORDER BY created_at DESC",
                 Session.userId
             ));
-            dashboardLoansTable.setModel(buildLoanTableModel());
             // load all admin notifications for this user
             refreshNotifications();
         } catch (Exception e) {
             System.out.println(e);
-            if (statusValueLabel != null) {
-                statusValueLabel.setText("Unable to load data");
-            }
         }
     }
 
@@ -463,7 +457,7 @@ public class UserDashboard extends javax.swing.JFrame {
 
     private DefaultTableModel buildLoanTableModel() {
         DefaultTableModel model = new DefaultTableModel(new String[]{
-            "Loan ID", "Amount", "Interest", "Total Payable", "Remaining", "Status", "Due Date", "Witness", "Blocked"
+            "Loan ID", "Amount", "Interest", "Total Payable", "Remaining", "Status", "Due Date", "Blocked"
         }, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -481,13 +475,12 @@ public class UserDashboard extends javax.swing.JFrame {
                 formatMoney(toDouble(loan.get("remaining_balance"))),
                 loan.get("status"),
                 loan.get("due_date"),
-                loan.get("witness_name") == null ? "-" : loan.get("witness_name"),
                 Boolean.TRUE.equals(loan.get("is_blocked")) ? "Yes" : "No"
             });
         }
 
         if (loans.isEmpty()) {
-            model.addRow(new Object[]{"-", "-", "-", "-", "-", "No loans yet", "-", "-", "-"});
+            model.addRow(new Object[]{"-", "-", "-", "-", "-", "No loans yet", "-", "-"});
         }
 
         return model;
@@ -876,107 +869,7 @@ public class UserDashboard extends javax.swing.JFrame {
     }//GEN-LAST:event_DepositBtnActionPerformed
 
     private void LoanBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_LoanBtnActionPerformed
-       
-
-    try {
-        Map<String, Object> activeLoan = getActiveLoanForCurrentUser();
-        if (activeLoan != null) {
-            boolean paidLoan = promptPaymentForActiveLoan(activeLoan);
-            if (!paidLoan) {
-                return;
-            }
-
-            Map<String, Object> refreshedLoan = getActiveLoanForCurrentUser();
-            if (refreshedLoan != null) {
-                JOptionPane.showMessageDialog(this,
-                    "You still have an active loan. Please pay it in full before applying for another loan.",
-                    "Active Loan Exists",
-                    JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-        }
-
-        // ✅ NO BALANCE REQUIREMENT - Users can loan with zero balance
-        // Only validate loan amount is within allowed range: ₱50,000 - ₱300,000
-
-        double minimumLoan = 50000.0;
-        double maximumLoan = 300000.0;
-
-        String input = JOptionPane.showInputDialog(
-            this,
-            "Enter desired loan amount\nMinimum: ₱" + minimumLoan + "\nMaximum: ₱" + maximumLoan);
-        if (input == null || input.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Loan cancelled");
-            return;
-        }
-
-        double requested;
-        try {
-            requested = Double.parseDouble(input);
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Invalid loan amount");
-            return;
-        }
-
-        if (requested < minimumLoan) {
-            JOptionPane.showMessageDialog(this, "Loan amount must be at least ₱" + minimumLoan);
-            return;
-        }
-
-        if (requested > maximumLoan) {
-            JOptionPane.showMessageDialog(this, "Requested amount exceeds maximum of ₱" + maximumLoan);
-            return;
-        }
-
-        double interestRate = 0.10; // 10% interest
-        double totalPayable = requested + (requested * interestRate);
-
-        PreparedStatement pst = DB.connect().prepareStatement(
-            "INSERT INTO loans(user_id,amount,interest_rate,total_payable) VALUES(?,?,?,?)"
-        );
-
-        pst.setInt(1, Session.userId);
-        pst.setDouble(2, requested);
-        pst.setDouble(3, interestRate);
-        pst.setDouble(4, totalPayable);
-        pst.executeUpdate();
-
-        String loanReceipt = "CAGUIOA BANK\n"
-            + "Loan Receipt\n"
-            + "-------------------------\n"
-            + "User ID: " + Session.userId + "\n"
-            + "Date: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + "\n"
-            + "Loan Amount: ₱" + String.format("%.2f", requested) + "\n"
-            + "Interest Rate: " + (interestRate * 100) + "%\n"
-            + "Interest Charge: ₱" + String.format("%.2f", (requested * interestRate)) + "\n"
-            + "Total Payable: ₱" + String.format("%.2f", totalPayable) + "\n"
-            + "Valid Range: ₱" + minimumLoan + " - ₱" + maximumLoan + "\n"
-            + "-------------------------\n"
-            + "Thank you.";
-
-        JOptionPane.showMessageDialog(this, "✅ Loan Approved!\n\nAmount: ₱" + String.format("%.2f", requested) + 
-            "\nInterest (10%): ₱" + String.format("%.2f", (requested*interestRate)) + 
-            "\nTotal Payable: ₱" + String.format("%.2f", totalPayable));
-        JOptionPane.showMessageDialog(this, loanReceipt, "Loan Receipt", JOptionPane.INFORMATION_MESSAGE);
-
-        int printOption = JOptionPane.showConfirmDialog(
-            this,
-            "Do you want to print this loan receipt?",
-            "Print Loan Receipt",
-            JOptionPane.YES_NO_OPTION
-        );
-
-        if (printOption == JOptionPane.YES_OPTION) {
-            printReceipt(loanReceipt);
-        }
-        
-        refreshLiveDashboard();
-
-    } catch(Exception e){
-        System.out.println(e);
-        JOptionPane.showMessageDialog(this, "Unable to process loan");
-    }
-
+        openLoanApplication();
     }//GEN-LAST:event_LoanBtnActionPerformed
 
     private void WithdrawBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_WithdrawBtnActionPerformed
@@ -998,6 +891,44 @@ public class UserDashboard extends javax.swing.JFrame {
         if (withdrawAmount <= 0) {
             JOptionPane.showMessageDialog(this, "Amount must be greater than zero");
             return;
+        }
+
+        // Select withdrawal method (similar to deposit)
+        String[] withdrawMethods = {"ATM/Cash Pickup", "GCash Transfer", "PayMaya Transfer", "Bank Transfer"};
+        String method = (String) JOptionPane.showInputDialog(
+            this,
+            "Select Withdrawal Method",
+            "Withdrawal",
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            withdrawMethods,
+            withdrawMethods[0]
+        );
+
+        if (method == null) {
+            JOptionPane.showMessageDialog(this, "Withdrawal cancelled");
+            return;
+        }
+
+        String finalMethod = method;
+        if ("Bank Transfer".equals(method)) {
+            String[] bankOptions = {"BDO", "LandBank", "UnionBank", "GoTymeBank", "SeaBank"};
+            String bank = (String) JOptionPane.showInputDialog(
+                this,
+                "Select Bank",
+                "Select Bank for Transfer",
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                bankOptions,
+                bankOptions[0]
+            );
+
+            if (bank == null) {
+                JOptionPane.showMessageDialog(this, "Withdrawal cancelled");
+                return;
+            }
+
+            finalMethod = "Bank Transfer - " + bank;
         }
 
         try {
@@ -1023,7 +954,7 @@ public class UserDashboard extends javax.swing.JFrame {
 
             int confirm = JOptionPane.showConfirmDialog(
                 this,
-                "Withdraw " + withdrawAmount + " from your account?",
+                "Withdraw " + withdrawAmount + " via " + finalMethod + "?",
                 "Confirm Withdrawal",
                 JOptionPane.YES_NO_OPTION
             );
@@ -1048,23 +979,42 @@ public class UserDashboard extends javax.swing.JFrame {
             pst2.setInt(1, Session.userId);
             pst2.setString(2, "Withdraw");
             pst2.setDouble(3, withdrawAmount);
-            pst2.setString(4, "ATM/Cash");
+            pst2.setString(4, finalMethod);
             pst2.executeUpdate();
 
             double newBalance = currentBalance - withdrawAmount;
 
-            JOptionPane.showMessageDialog(this, "Withdraw successful");
+            // Ask if user wants to pick up money or have it transferred
+            String[] pickupOptions = {"Pick Up Cash at Counter", "Confirm Transfer"};
+            String pickupChoice = (String) JOptionPane.showInputDialog(
+                this,
+                "How do you want to receive your money?",
+                "Get Money",
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                pickupOptions,
+                pickupOptions[0]
+            );
+
+            if (pickupChoice == null) {
+                pickupChoice = "Confirm Transfer";
+            }
+
+            JOptionPane.showMessageDialog(this, "Withdrawal successful - " + pickupChoice);
 
             String receipt = "CAGUIOA BANK\n"
                 + "Withdrawal Receipt\n"
-                + "-------------------------\n"
+                + "=========================\n"
                 + "User ID: " + Session.userId + "\n"
                 + "Date: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + "\n"
-                + "Transaction: Withdraw\n"
-                + "Amount: " + withdrawAmount + "\n"
-                + "Previous Balance: " + currentBalance + "\n"
-                + "New Balance: " + newBalance + "\n"
-                + "-------------------------\n"
+                + "Transaction: Withdrawal\n"
+                + "Method: " + finalMethod + "\n"
+                + "Pickup Option: " + pickupChoice + "\n"
+                + "Amount: ₱" + withdrawAmount + "\n"
+                + "Previous Balance: ₱" + currentBalance + "\n"
+                + "New Balance: ₱" + newBalance + "\n"
+                + "=========================\n"
+                + "Status: APPROVED\n"
                 + "Thank you.";
 
             JOptionPane.showMessageDialog(this, receipt, "Receipt", JOptionPane.INFORMATION_MESSAGE);
@@ -1080,9 +1030,11 @@ public class UserDashboard extends javax.swing.JFrame {
                 printReceipt(receipt);
             }
 
+            refreshLiveDashboard();
+
         } catch(Exception e) {
             System.out.println(e);
-            JOptionPane.showMessageDialog(this, "Withdraw failed");
+            JOptionPane.showMessageDialog(this, "Withdrawal failed");
         }
 
     }//GEN-LAST:event_WithdrawBtnActionPerformed
@@ -1641,58 +1593,38 @@ try {
         dispose();
     }
 
-    private void handlePINReset() {
-        try {
-            // Check if user has an approved PIN reset request
-            int requestId = PINResetManager.getApprovedRequestId(Session.userId);
-            
-            if (requestId == -1) {
-                // No approved request - offer to submit one
-                int option = JOptionPane.showConfirmDialog(this,
-                    "You don't have an approved PIN reset request.\n\n" +
-                    "Would you like to submit a request to the admin?\n" +
-                    "The admin will review and approve your request.",
-                    "No Approved Request",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.INFORMATION_MESSAGE);
-                
-                if (option == JOptionPane.YES_OPTION) {
-                    String email = JOptionPane.showInputDialog(this, "Enter your email address:", "");
-                    if (email != null && !email.trim().isEmpty()) {
-                        if (!isValidEmail(email)) {
-                            JOptionPane.showMessageDialog(this, "❌ Please enter a valid email address.", "Invalid Email", JOptionPane.ERROR_MESSAGE);
-                            return;
-                        }
-                        
-                        if (PINResetManager.hasPendingRequest(Session.userId)) {
-                            JOptionPane.showMessageDialog(this, "❌ You already have a pending PIN reset request.", "Pending Request", JOptionPane.WARNING_MESSAGE);
-                            return;
-                        }
-                        
-                        if (PINResetManager.submitPINResetRequest(Session.userId, email)) {
-                            JOptionPane.showMessageDialog(this,
-                                "PIN reset request submitted successfully!\n\n" +
-                                "The admin will review your request shortly.\n" +
-                                "Check back once approved to reset your PIN.",
-                                "Request Submitted",
-                                JOptionPane.INFORMATION_MESSAGE);
-                        } else {
-                            JOptionPane.showMessageDialog(this, "Failed to submit request.", "Error", JOptionPane.ERROR_MESSAGE);
-                        }
-                    }
-                }
-            } else {
-                // Approved request exists - allow PIN reset
-                new ResetPINDialog(this, Session.userId, requestId).setVisible(true);
-                refreshLiveDashboard();
+    private void openLoanApplication() {
+        Map<String, Object> activeLoan = getActiveLoanForCurrentUser();
+        if (activeLoan != null) {
+            boolean paidLoan = promptPaymentForActiveLoan(activeLoan);
+            if (!paidLoan) {
+                return;
             }
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+
+            Map<String, Object> refreshedLoan = getActiveLoanForCurrentUser();
+            if (refreshedLoan != null) {
+                JOptionPane.showMessageDialog(this,
+                    "You still have an active loan. Please pay it in full before applying for another loan.",
+                    "Active Loan Exists",
+                    JOptionPane.WARNING_MESSAGE);
+                return;
+            }
         }
+
+        new LoanApplicationDialog(this, Session.userId).setVisible(true);
     }
 
-    private boolean isValidEmail(String email) {
-        return email.matches("^[A-Za-z0-9+_.-]+@(.+)$");
+    private void openLoanPayment() {
+        Map<String, Object> activeLoan = getActiveLoanForCurrentUser();
+        if (activeLoan == null) {
+            JOptionPane.showMessageDialog(this,
+                "You don't have any active loans to pay.\n\nWould you like to apply for a new loan?",
+                "No Active Loan",
+                JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        new LoanPaymentDialog(this, Session.userId).setVisible(true);
     }
 
     private void CheckBalanceBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CheckBalanceBtnActionPerformed

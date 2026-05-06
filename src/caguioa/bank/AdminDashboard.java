@@ -35,9 +35,6 @@ public class AdminDashboard extends javax.swing.JFrame {
     private JTable allUsersTable;
     private JTable allTransactionsTable;
     private JTable allLoansTable;
-    private JTable pinResetRequestsTable;
-    private DefaultTableModel pinResetTableModel;
-    private JLabel pinResetCountLabel;
 
     public AdminDashboard() {
         initComponents();
@@ -101,6 +98,14 @@ public class AdminDashboard extends javax.swing.JFrame {
         loanMgmtBtn.setBorder(BorderFactory.createEmptyBorder(8, 14, 8, 14));
         loanMgmtBtn.addActionListener(evt -> openLoanManagementDialog());
 
+        JButton loanApprovalsBtn = new JButton("📋 Loan Applications");
+        loanApprovalsBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
+        loanApprovalsBtn.setBackground(new Color(63, 81, 181));
+        loanApprovalsBtn.setForeground(Color.WHITE);
+        loanApprovalsBtn.setFocusPainted(false);
+        loanApprovalsBtn.setBorder(BorderFactory.createEmptyBorder(8, 14, 8, 14));
+        loanApprovalsBtn.addActionListener(evt -> openLoanApplicationsDialog());
+
         JButton myDetailsBtn = new JButton("My Details");
         myDetailsBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
         myDetailsBtn.setBackground(new Color(33, 150, 243));
@@ -119,6 +124,7 @@ public class AdminDashboard extends javax.swing.JFrame {
 
         headerActions.add(refreshBtn);
         headerActions.add(loanMgmtBtn);
+        headerActions.add(loanApprovalsBtn);
         headerActions.add(myDetailsBtn);
         // Init DB button to create all required tables
         JButton initDbBtn = new JButton("Init DB");
@@ -229,9 +235,6 @@ public class AdminDashboard extends javax.swing.JFrame {
         transactionsScroll.setBorder(BorderFactory.createTitledBorder("All Transactions"));
         tabbedPane.addTab("Transactions", transactionsScroll);
 
-        // PIN Reset Requests Tab
-        tabbedPane.addTab("🔐 PIN Resets", createPINResetTab());
-
         JPanel content = new JPanel(new BorderLayout(12, 12));
         content.setOpaque(false);
         content.add(summaryPanel, BorderLayout.NORTH);
@@ -276,11 +279,6 @@ public class AdminDashboard extends javax.swing.JFrame {
         dialog.setVisible(true);
         // Refresh dashboard after closing the dialog
         refreshAdminDashboard();
-    }
-
-    private void openPINResetRequestsDialog() {
-        PINResetRequestDialog dialog = new PINResetRequestDialog(this);
-        dialog.setVisible(true);
     }
 
     private void showAdminDetailsDialog() {
@@ -379,9 +377,6 @@ public class AdminDashboard extends javax.swing.JFrame {
             allLoansTable.setModel(buildTableModel(con,
                 "SELECT l.id, l.user_id, u.username, l.amount, l.interest_rate, l.total_payable, l.status, l.created_at "
                 + "FROM loans l LEFT JOIN users u ON l.user_id = u.id ORDER BY l.id DESC"));
-
-            // Load PIN reset requests
-            loadPINRequests();
 
         } catch (Exception e) {
             System.out.println(e);
@@ -501,167 +496,6 @@ public class AdminDashboard extends javax.swing.JFrame {
         return model;
     }
 
-    private JPanel createPINResetTab() {
-        JPanel panel = new JPanel(new BorderLayout(12, 12));
-        panel.setBorder(new EmptyBorder(12, 12, 12, 12));
-        panel.setBackground(new Color(240, 248, 245));
-
-        // Header with count
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setOpaque(false);
-        
-        JLabel titleLabel = new JLabel("PIN Reset Requests Management");
-        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 16));
-        titleLabel.setForeground(new Color(34, 139, 34));
-        
-        pinResetCountLabel = new JLabel("Pending: 0");
-        pinResetCountLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
-        pinResetCountLabel.setForeground(new Color(220, 53, 69));
-        
-        headerPanel.add(titleLabel, BorderLayout.WEST);
-        headerPanel.add(pinResetCountLabel, BorderLayout.EAST);
-
-        // Table
-        pinResetTableModel = new DefaultTableModel(
-            new String[]{"ID", "Username", "Full Name", "Email", "Status", "Requested", "Admin Response"},
-            0
-        ) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
-        };
-        
-        pinResetRequestsTable = new JTable(pinResetTableModel);
-        pinResetRequestsTable.setRowHeight(26);
-        pinResetRequestsTable.setShowGrid(true);
-        pinResetRequestsTable.setGridColor(new Color(188, 226, 158));
-        pinResetRequestsTable.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        pinResetRequestsTable.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 13));
-        pinResetRequestsTable.getTableHeader().setBackground(new Color(76, 175, 80));
-        pinResetRequestsTable.getTableHeader().setForeground(Color.BLACK);
-        pinResetRequestsTable.setAutoCreateRowSorter(true);
-        
-        JScrollPane scrollPane = new JScrollPane(pinResetRequestsTable);
-        scrollPane.setBorder(BorderFactory.createTitledBorder("Pending PIN Reset Requests"));
-
-        // Button Panel
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
-        buttonPanel.setOpaque(false);
-
-        JButton approveBtn = new JButton("✓ Approve Selected");
-        approveBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
-        approveBtn.setBackground(new Color(76, 175, 80));
-        approveBtn.setForeground(Color.WHITE);
-        approveBtn.setFocusPainted(false);
-        approveBtn.setBorder(BorderFactory.createEmptyBorder(8, 14, 8, 14));
-        approveBtn.addActionListener(e -> approvePINRequest());
-
-        JButton denyBtn = new JButton("✗ Deny Selected");
-        denyBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
-        denyBtn.setBackground(new Color(220, 53, 69));
-        denyBtn.setForeground(Color.WHITE);
-        denyBtn.setFocusPainted(false);
-        denyBtn.setBorder(BorderFactory.createEmptyBorder(8, 14, 8, 14));
-        denyBtn.addActionListener(e -> denyPINRequest());
-
-        JButton refreshBtn = new JButton("🔄 Refresh");
-        refreshBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
-        refreshBtn.setBackground(new Color(33, 150, 243));
-        refreshBtn.setForeground(Color.WHITE);
-        refreshBtn.setFocusPainted(false);
-        refreshBtn.setBorder(BorderFactory.createEmptyBorder(8, 14, 8, 14));
-        refreshBtn.addActionListener(e -> loadPINRequests());
-
-        buttonPanel.add(approveBtn);
-        buttonPanel.add(denyBtn);
-        buttonPanel.add(refreshBtn);
-
-        panel.add(headerPanel, BorderLayout.NORTH);
-        panel.add(scrollPane, BorderLayout.CENTER);
-        panel.add(buttonPanel, BorderLayout.SOUTH);
-
-        // Load initial data
-        loadPINRequests();
-
-        return panel;
-    }
-
-    private void loadPINRequests() {
-        pinResetTableModel.setRowCount(0);
-        
-        try {
-            ResultSet rs = PINResetManager.getPendingResetRequests();
-            
-            int count = 0;
-            if (rs != null) {
-                while (rs.next()) {
-                    pinResetTableModel.addRow(new Object[]{
-                        rs.getInt("id"),
-                        rs.getString("username"),
-                        rs.getString("fullname"),
-                        rs.getString("email"),
-                        rs.getString("status"),
-                        rs.getString("created_at"),
-                        rs.getString("admin_response") != null ? rs.getString("admin_response") : ""
-                    });
-                    count++;
-                }
-            }
-            pinResetCountLabel.setText("Pending: " + count);
-        } catch (Exception e) {
-            System.out.println("Error loading PIN reset requests: " + e);
-        }
-    }
-
-    private void approvePINRequest() {
-        int selectedRow = pinResetRequestsTable.getSelectedRow();
-        if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "❌ Please select a request to approve.", "No Selection", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        int requestId = (int) pinResetTableModel.getValueAt(selectedRow, 0);
-        String username = (String) pinResetTableModel.getValueAt(selectedRow, 1);
-
-        int confirm = JOptionPane.showConfirmDialog(this,
-            "Approve PIN reset request for: " + username + "?",
-            "Confirm Approval",
-            JOptionPane.YES_NO_OPTION);
-
-        if (confirm == JOptionPane.YES_OPTION) {
-            try {
-                PINResetManager.approveRequest(requestId, Session.userId);
-                JOptionPane.showMessageDialog(this, "✓ Request approved! User can now reset their PIN.", "Success", JOptionPane.INFORMATION_MESSAGE);
-                loadPINRequests();
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "❌ Error approving request: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        }
-    }
-
-    private void denyPINRequest() {
-        int selectedRow = pinResetRequestsTable.getSelectedRow();
-        if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "❌ Please select a request to deny.", "No Selection", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        int requestId = (int) pinResetTableModel.getValueAt(selectedRow, 0);
-        String username = (String) pinResetTableModel.getValueAt(selectedRow, 1);
-
-        String reason = JOptionPane.showInputDialog(this, "Enter reason for denial:", "Reason for Denial");
-        if (reason != null && !reason.trim().isEmpty()) {
-            try {
-                PINResetManager.denyRequest(requestId, Session.userId, reason);
-                JOptionPane.showMessageDialog(this, "✓ Request denied. User has been notified.", "Success", JOptionPane.INFORMATION_MESSAGE);
-                loadPINRequests();
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "❌ Error denying request: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        }
-    }
-
     private JPanel createInfoCard(String labelText, JLabel valueLabel, Color accentColor) {
         JPanel card = new JPanel(new BorderLayout());
         card.setBackground(Color.WHITE);
@@ -684,6 +518,224 @@ public class AdminDashboard extends javax.swing.JFrame {
 
     private String formatMoney(double amount) {
         return String.format("₱%.2f", amount);
+    }
+
+    private void openLoanApplicationsDialog() {
+        javax.swing.JDialog dialog = new javax.swing.JDialog(this, "📋 Loan Applications - Pending Approvals", true);
+        dialog.setSize(1000, 600);
+        dialog.setLocationRelativeTo(this);
+
+        JPanel mainPanel = new JPanel(new BorderLayout(12, 12));
+        mainPanel.setBorder(new EmptyBorder(14, 14, 14, 14));
+        mainPanel.setBackground(new Color(240, 248, 245));
+
+        // Title
+        JLabel titleLabel = new JLabel("Pending Loan Applications - Approve or Reject");
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 16));
+        titleLabel.setForeground(new Color(0, 102, 51));
+
+        // Applications table
+        JTable applicationsTable = new JTable();
+        applicationsTable.setRowHeight(28);
+        applicationsTable.setShowGrid(true);
+        applicationsTable.setGridColor(new Color(188, 226, 158));
+        applicationsTable.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        applicationsTable.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12));
+        applicationsTable.getTableHeader().setBackground(new Color(76, 175, 80));
+        applicationsTable.getTableHeader().setForeground(Color.WHITE);
+        applicationsTable.setAutoCreateRowSorter(true);
+
+        // Load pending applications
+        try {
+            Connection con = DB.connect();
+            PreparedStatement pst = con.prepareStatement(
+                "SELECT la.id, la.user_id, la.full_name, la.requested_amount, la.purpose, la.employment_status, " +
+                "la.monthly_income, la.loan_term_months, la.created_at FROM loan_applications la WHERE la.status='pending' ORDER BY la.created_at ASC"
+            );
+            ResultSet rs = pst.executeQuery();
+            ResultSetMetaData metaData = rs.getMetaData();
+            int columnCount = metaData.getColumnCount();
+
+            String[] columns = new String[columnCount];
+            for (int i = 1; i <= columnCount; i++) {
+                columns[i - 1] = metaData.getColumnLabel(i);
+            }
+
+            DefaultTableModel model = new DefaultTableModel(columns, 0) {
+                @Override
+                public boolean isCellEditable(int row, int column) {
+                    return false;
+                }
+            };
+
+            while (rs.next()) {
+                Object[] row = new Object[columnCount];
+                for (int i = 1; i <= columnCount; i++) {
+                    row[i - 1] = rs.getObject(i);
+                }
+                model.addRow(row);
+            }
+            applicationsTable.setModel(model);
+        } catch (Exception e) {
+            System.out.println("Error loading applications: " + e);
+        }
+
+        JScrollPane scrollPane = new JScrollPane(applicationsTable);
+        scrollPane.setBorder(BorderFactory.createTitledBorder("Applications"));
+
+        // Control buttons
+        JPanel controlPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 8));
+        controlPanel.setOpaque(false);
+
+        JButton approveBtn = new JButton("✓ Approve Application");
+        approveBtn.setBackground(new Color(76, 175, 80));
+        approveBtn.setForeground(Color.WHITE);
+        approveBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
+        approveBtn.setFocusPainted(false);
+        approveBtn.addActionListener(e -> {
+            int selectedRow = applicationsTable.getSelectedRow();
+            if (selectedRow < 0) {
+                JOptionPane.showMessageDialog(dialog, "Please select an application to approve.", "No Selection", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            int modelRow = applicationsTable.convertRowIndexToModel(selectedRow);
+            int appId = (Integer) applicationsTable.getModel().getValueAt(modelRow, 0);
+            approveLoanApplication(appId, dialog, applicationsTable);
+        });
+
+        JButton rejectBtn = new JButton("✗ Reject Application");
+        rejectBtn.setBackground(new Color(244, 67, 54));
+        rejectBtn.setForeground(Color.WHITE);
+        rejectBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
+        rejectBtn.setFocusPainted(false);
+        rejectBtn.addActionListener(e -> {
+            int selectedRow = applicationsTable.getSelectedRow();
+            if (selectedRow < 0) {
+                JOptionPane.showMessageDialog(dialog, "Please select an application to reject.", "No Selection", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            int modelRow = applicationsTable.convertRowIndexToModel(selectedRow);
+            int appId = (Integer) applicationsTable.getModel().getValueAt(modelRow, 0);
+            rejectLoanApplication(appId, dialog, applicationsTable);
+        });
+
+        JButton refreshBtn = new JButton("🔄 Refresh");
+        refreshBtn.setBackground(new Color(33, 150, 243));
+        refreshBtn.setForeground(Color.WHITE);
+        refreshBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
+        refreshBtn.setFocusPainted(false);
+        refreshBtn.addActionListener(e -> openLoanApplicationsDialog());
+
+        controlPanel.add(approveBtn);
+        controlPanel.add(rejectBtn);
+        controlPanel.add(refreshBtn);
+
+        mainPanel.add(titleLabel, BorderLayout.NORTH);
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
+        mainPanel.add(controlPanel, BorderLayout.SOUTH);
+
+        dialog.setContentPane(mainPanel);
+        dialog.setVisible(true);
+    }
+
+    private void approveLoanApplication(int applicationId, javax.swing.JDialog dialog, JTable table) {
+        try {
+            Connection con = DB.connect();
+
+            // Get application details
+            PreparedStatement getPst = con.prepareStatement(
+                "SELECT user_id, loan_amount_requested FROM loan_applications WHERE id=?"
+            );
+            getPst.setInt(1, applicationId);
+            ResultSet rs = getPst.executeQuery();
+
+            if (!rs.next()) {
+                JOptionPane.showMessageDialog(dialog, "Application not found.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            int userId = rs.getInt("user_id");
+            double loanAmount = rs.getDouble("loan_amount_requested");
+
+            // Ask for approved amount (can be different from requested)
+            String amountStr = JOptionPane.showInputDialog(dialog,
+                "Enter approved amount (₱" + String.format("%.2f", loanAmount) + " requested):",
+                String.format("%.2f", loanAmount));
+
+            if (amountStr == null || amountStr.trim().isEmpty()) {
+                return;
+            }
+
+            double approvedAmount = Double.parseDouble(amountStr);
+
+            // Approve the application using database function
+            PreparedStatement approvePst = con.prepareStatement(
+                "SELECT approve_loan_application(?, ?, ?) AS loan_id"
+            );
+            approvePst.setInt(1, applicationId);
+            approvePst.setInt(2, Session.adminId);
+            approvePst.setDouble(3, approvedAmount);
+            ResultSet approveRs = approvePst.executeQuery();
+
+            if (approveRs.next()) {
+                int loanId = approveRs.getInt("loan_id");
+                JOptionPane.showMessageDialog(dialog,
+                    "✓ Application approved!\n\n" +
+                    "Loan ID: " + loanId + "\n" +
+                    "Amount: ₱" + String.format("%.2f", approvedAmount) + "\n" +
+                    "Interest: 2% (₱" + String.format("%.2f", approvedAmount * 0.02) + ")\n" +
+                    "Total Payable: ₱" + String.format("%.2f", approvedAmount * 1.02) + "\n" +
+                    "Term: 6 months\n" +
+                    "Status: Active",
+                    "Approval Successful",
+                    JOptionPane.INFORMATION_MESSAGE);
+
+                // Refresh the table
+                openLoanApplicationsDialog();
+                dialog.dispose();
+            }
+        } catch (NumberFormatException nfe) {
+            JOptionPane.showMessageDialog(dialog, "Please enter a valid amount.", "Invalid Input", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception e) {
+            System.out.println("Error approving application: " + e);
+            JOptionPane.showMessageDialog(dialog, "Error approving application: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void rejectLoanApplication(int applicationId, javax.swing.JDialog dialog, JTable table) {
+        try {
+            String reason = JOptionPane.showInputDialog(dialog,
+                "Enter rejection reason:",
+                "Insufficient income");
+
+            if (reason == null || reason.trim().isEmpty()) {
+                return;
+            }
+
+            Connection con = DB.connect();
+            PreparedStatement rejectPst = con.prepareStatement(
+                "SELECT reject_loan_application(?, ?, ?) AS result"
+            );
+            rejectPst.setInt(1, applicationId);
+            rejectPst.setInt(2, Session.adminId);
+            rejectPst.setString(3, reason);
+            ResultSet rs = rejectPst.executeQuery();
+
+            if (rs.next()) {
+                JOptionPane.showMessageDialog(dialog,
+                    "✓ Application rejected\n\n" +
+                    "Reason: " + reason,
+                    "Rejection Complete",
+                    JOptionPane.INFORMATION_MESSAGE);
+
+                // Refresh
+                openLoanApplicationsDialog();
+                dialog.dispose();
+            }
+        } catch (Exception e) {
+            System.out.println("Error rejecting application: " + e);
+            JOptionPane.showMessageDialog(dialog, "Error rejecting application: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     @SuppressWarnings("unchecked")

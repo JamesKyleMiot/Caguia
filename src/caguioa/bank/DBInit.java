@@ -63,7 +63,7 @@ public class DBInit {
                 "id INT AUTO_INCREMENT PRIMARY KEY, " +
                 "user_id INT NOT NULL, " +
                 "amount DOUBLE NOT NULL, " +
-                "interest_rate DOUBLE DEFAULT 0.10, " +
+                "interest_rate DOUBLE DEFAULT 0.02, " +
                 "total_payable DOUBLE, " +
                 "remaining_balance DOUBLE DEFAULT 0, " +
                 "due_date DATE, " +
@@ -81,6 +81,8 @@ public class DBInit {
             );
             pst.execute();
             pst.close();
+
+            // Repair older loans tables that may be missing the primary key or newer columns.
 
             // account_audit_log
             pst = con.prepareStatement(

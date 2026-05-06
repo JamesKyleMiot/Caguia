@@ -1,8 +1,8 @@
 package caguioa.bank;
 
+import java.awt.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import java.awt.*;
 
 public class ResetPINDialog extends JDialog {
     
@@ -14,8 +14,8 @@ public class ResetPINDialog extends JDialog {
     private int userId;
     private int requestId;
 
-    public ResetPINDialog(Frame owner, int userId, int requestId) {
-        super(owner, "Reset PIN - Set New PIN", true);
+    public ResetPINDialog(Window owner, int userId, int requestId) {
+        super(owner, "Reset PIN - Set New PIN", ModalityType.APPLICATION_MODAL);
         this.userId = userId;
         this.requestId = requestId;
         
@@ -40,9 +40,9 @@ public class ResetPINDialog extends JDialog {
         
         JLabel instructionLabel = new JLabel(
             "<html>" +
-            "<b>Your PIN reset request has been approved!</b><br>" +
-            "Please enter and confirm your new PIN below.<br>" +
-            "PIN must be exactly 6 digits (0-9).<br>" +
+            "<b>Set Your New PIN:</b><br>" +
+            "Enter and confirm your new 6-digit PIN.<br>" +
+            "PIN must be 6 digits only (0-9).<br>" +
             "</html>"
         );
         instructionLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
@@ -100,7 +100,7 @@ public class ResetPINDialog extends JDialog {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
         buttonPanel.setOpaque(false);
 
-        resetBtn = new JButton("Reset PIN");
+        resetBtn = new JButton("OK");
         resetBtn.setBackground(new Color(76, 175, 80));
         resetBtn.setForeground(Color.WHITE);
         resetBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
@@ -170,9 +170,11 @@ public class ResetPINDialog extends JDialog {
                 statusLabel.setForeground(new Color(34, 139, 34));
                 
                 JOptionPane.showMessageDialog(this,
-                    "PIN reset successfully!\n\n" +
-                    "You can now use your new PIN to log in.",
-                    "Success",
+                    "✓ PIN RESET SUCCESSFULLY!\n\n" +
+                    "✓ Your new PIN has been saved\n" +
+                    "✓ Return to login screen\n" +
+                    "✓ Login with your new PIN",
+                    "PIN Reset Complete",
                     JOptionPane.INFORMATION_MESSAGE);
                 
                 dispose();

@@ -96,7 +96,7 @@ public class RegesterUser extends javax.swing.JFrame {
 
         CreateAccountBtn.setBackground(new java.awt.Color(0, 102, 0));
         CreateAccountBtn.setForeground(new java.awt.Color(255, 255, 255));
-        CreateAccountBtn.setText("SIGN IN");
+        CreateAccountBtn.setText("SIGN UP");
         CreateAccountBtn.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 CreateAccountBtnActionPerformed(evt);
@@ -234,6 +234,23 @@ public class RegesterUser extends javax.swing.JFrame {
     String pin = new String(txtPin.getPassword());
     String confirmPin = new String(jPasswordField1.getPassword());
 
+    int userAge;
+    try {
+        userAge = Integer.parseInt(age);
+    } catch (NumberFormatException e) {
+        JOptionPane.showMessageDialog(this,
+            "Please enter a valid age.");
+        txtAge.requestFocus();
+        return;
+    }
+
+    if (userAge < 21) {
+        JOptionPane.showMessageDialog(this,
+            "Only users 21 years old and above can register.");
+        txtAge.requestFocus();
+        return;
+    }
+
     if (nationality == null || nationality.equals("Select Nationality")) {
         JOptionPane.showMessageDialog(this,
             "Please select your nationality.");
@@ -287,7 +304,7 @@ public class RegesterUser extends javax.swing.JFrame {
         pst.setString(3, sex);
         pst.setString(4, nationality);
         pst.setString(5, address);
-        pst.setInt(6, Integer.parseInt(age));
+        pst.setInt(6, userAge);
         pst.setString(7, hashedPin);
 
         pst.executeUpdate();

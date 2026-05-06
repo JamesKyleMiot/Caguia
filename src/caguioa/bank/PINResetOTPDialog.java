@@ -1,8 +1,8 @@
 package caguioa.bank;
 
+import java.awt.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import java.awt.*;
 
 /**
  * Dialog for entering PIN Reset OTP
@@ -18,8 +18,8 @@ public class PINResetOTPDialog extends JDialog {
     private int userId;
     private boolean otpVerified = false;
 
-    public PINResetOTPDialog(Frame owner, int requestId, int userId) {
-        super(owner, "Enter OTP - PIN Reset", true);
+    public PINResetOTPDialog(Window owner, int requestId, int userId) {
+        super(owner, "Enter OTP - PIN Reset", ModalityType.APPLICATION_MODAL);
         this.requestId = requestId;
         this.userId = userId;
         
@@ -44,10 +44,10 @@ public class PINResetOTPDialog extends JDialog {
         
         JLabel instructionLabel = new JLabel(
             "<html>" +
-            "<b>OTP Verification:</b><br>" +
-            "An OTP has been sent to your registered email.<br>" +
-            "Enter the 6-digit OTP below to verify your identity.<br>" +
-            "<span style='color:red;'>This OTP will expire in 10 minutes.</span>" +
+            "<b>Enter your OTP:</b><br>" +
+            "Copy the 6-digit code from your email<br>" +
+            "and enter it below.<br>" +
+            "<span style='color:red;'>⏱️ Expires in 10 minutes</span>" +
             "</html>"
         );
         instructionLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
@@ -101,7 +101,7 @@ public class PINResetOTPDialog extends JDialog {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
         buttonPanel.setOpaque(false);
 
-        verifyBtn = new JButton("Verify OTP");
+        verifyBtn = new JButton("OK");
         verifyBtn.setBackground(new Color(0, 102, 0));
         verifyBtn.setForeground(Color.WHITE);
         verifyBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
@@ -153,14 +153,14 @@ public class PINResetOTPDialog extends JDialog {
         statusLabel.setForeground(Color.BLUE);
 
         if (PINResetManager.verifyOTP(requestId, otp)) {
-            statusLabel.setText("✓ OTP verified successfully!");
+            statusLabel.setText("✓ OTP verified! Setting new PIN...");
             statusLabel.setForeground(new Color(34, 139, 34));
             otpVerified = true;
 
             JOptionPane.showMessageDialog(this,
-                "OTP verified successfully!\n\n" +
-                "You can now set your new PIN.",
-                "Success",
+                "✓ OTP verified successfully!\n\n" +
+                "Next: Set your new 6-digit PIN",
+                "OTP Verified",
                 JOptionPane.INFORMATION_MESSAGE);
 
             // Open PIN reset dialog

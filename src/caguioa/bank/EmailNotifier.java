@@ -1,39 +1,34 @@
 package caguioa.bank;
 
+import java.io.*;
+
+/**
+ * Email Notifier for PIN Reset OTP
+ * Sends real emails via Gmail SMTP using PowerShell
+ */
 public class EmailNotifier {
 
     private static String SENDER_EMAIL = "your_email@gmail.com";
     private static String SENDER_PASSWORD = "your_app_password";
+    private static boolean credentialsSet = false;
 
+    /**
+     * Set Gmail credentials for SMTP
+     * @param email Your Gmail address
+     * @param password Gmail App Password
+     */
     public static void setSenderCredentials(String email, String password) {
         if (email != null && !email.trim().isEmpty()) {
             SENDER_EMAIL = email;
+            credentialsSet = true;
         }
         if (password != null && !password.trim().isEmpty()) {
             SENDER_PASSWORD = password;
+            credentialsSet = true;
         }
-    }
-
-    public static boolean sendLoanDueReminder(String recipientEmail, String userName,
-                                               String loanAmount, String dueDate) {
-        return logUnsupportedEmail(recipientEmail, "Loan reminder", userName, loanAmount, dueDate);
-    }
-
-    public static boolean sendAccountSuspensionWarning(String recipientEmail, String userName,
-                                                        String loanAmount, String daysOverdue) {
-        return logUnsupportedEmail(recipientEmail, "Suspension warning", userName, loanAmount, daysOverdue);
-    }
-
-    public static boolean sendAccountReactivationEmail(String recipientEmail, String userName,
-                                                        String paidAmount) {
-        return logUnsupportedEmail(recipientEmail, "Reactivation notice", userName, paidAmount, "");
-    }
-
-    public static boolean sendLoanCreationConfirmation(String recipientEmail, String userName,
-                                                        String loanAmount, String interestRate,
-                                                        String totalPayable, String dueDate,
-                                                        String witnessName, String witnessContact) {
-        return logUnsupportedEmail(recipientEmail, "Loan confirmation", userName, loanAmount, totalPayable);
+        if (credentialsSet) {
+            System.out.println("✓ Gmail credentials configured: " + SENDER_EMAIL);
+        }
     }
 
     /**
@@ -45,105 +40,184 @@ public class EmailNotifier {
      */
     public static boolean sendPINResetOTP(String recipientEmail, String userName, String otp) {
         if (recipientEmail == null || recipientEmail.trim().isEmpty()) {
-            System.out.println("EmailNotifier: empty recipient for PIN Reset OTP");
+            System.out.println("❌ ERROR: empty recipient for PIN Reset OTP");
             return false;
         }
 
-        String subject = "Caguioa Bank - PIN Reset OTP";
+        String subject = "🔐 Caguioa Bank - PIN Reset OTP";
         String body = "Dear " + userName + ",\n\n" +
-                      "Your PIN Reset request has been approved.\n\n" +
-                      "Your One-Time Password (OTP) is: " + otp + "\n\n" +
-                      "This OTP will expire in 10 minutes.\n\n" +
-                      "Please enter this OTP to verify your identity and reset your PIN.\n\n" +
-                      "If you did not request this PIN reset, please contact the admin immediately.\n\n" +
+                      "Your PIN Reset request has been received.\n\n" +
+                      "============================================\n" +
+                      "Your One-Time Password (OTP) is:\n" +
+                      "\n" +
+                      "     🔑 " + otp + "\n" +
+                      "\n" +
+                      "============================================\n\n" +
+                      "⏱️ IMPORTANT: This OTP will expire in 10 minutes.\n\n" +
+                      "📝 Steps to Reset Your PIN:\n" +
+                      "1. Return to Caguioa Bank Application\n" +
+                      "2. Enter the OTP in the verification dialog\n" +
+                      "3. Create your new 6-digit PIN\n" +
+                      "4. Confirm your new PIN\n" +
+                      "5. Login with your new PIN\n\n" +
+                      "⚠️ SECURITY NOTICE:\n" +
+                      "- Never share this OTP with anyone\n" +
+                      "- Caguioa Bank staff will never ask for your OTP\n" +
+                      "- If you did not request this, contact support immediately\n\n" +
                       "Best regards,\n" +
-                      "Caguioa Bank Administration";
+                      "Caguioa Bank Security Team";
 
-        System.out.println("EmailNotifier: PIN Reset OTP Email");
-        System.out.println("Recipient: " + recipientEmail);
-        System.out.println("Sender: " + SENDER_EMAIL);
-        System.out.println("Subject: " + subject);
-        System.out.println("OTP: " + otp);
-        System.out.println("Note: To enable actual email sending, add javax.mail / Jakarta Mail to the project libraries.");
-        return false;
+        return sendEmail(recipientEmail, subject, body);
     }
 
     /**
-     * Send PIN Reset Approval Notification
-     * @param recipientEmail User's email address
-     * @param userName User's name
-     * @return true if email sent successfully
+     * Core email sending method - sends via Gmail SMTP using PowerShell
      */
+    private static boolean sendEmail(String recipientEmail, String subject, String body) {
+        System.out.println("\n" + "=".repeat(70));
+        System.out.println("📧 SENDING EMAIL VIA GMAIL SMTP");
+        System.out.println("=".repeat(70));
+        System.out.println("To: " + recipientEmail);
+        System.out.println("From: " + SENDER_EMAIL);
+        System.out.println("Subject: " + subject);
+        System.out.println("-".repeat(70));
+        System.out.println(body);
+        System.out.println("=".repeat(70));
+
+        // Check if credentials are configured
+        if (!credentialsSet || SENDER_EMAIL.equals("your_email@gmail.com")) {
+            System.out.println("\n⚠️ WARNING: Gmail credentials NOT configured!");
+            System.out.println("   Email was NOT sent.");
+            System.out.println("   To enable real email sending, configure credentials first:");
+            System.out.println("   EmailNotifier.setSenderCredentials(\"your_email@gmail.com\", \"app_password\");");
+            System.out.println("=".repeat(70) + "\n");
+            return false;
+        }
+
+        // Try to send via PowerShell
+        try {
+            return sendViaGmailPowerShell(recipientEmail, subject, body);
+        } catch (Exception e) {
+            System.out.println("\n❌ ERROR sending email: " + e.getMessage());
+            System.out.println("=".repeat(70) + "\n");
+            return false;
+        }
+    }
+
+    /**
+     * Send email via PowerShell and Gmail SMTP
+     */
+    private static boolean sendViaGmailPowerShell(String recipientEmail, String subject, String body) throws Exception {
+        // Escape special characters for PowerShell
+        String escapedBody = body.replace("\"", "\\\"").replace("\n", "`n");
+        String escapedSubject = subject.replace("\"", "\\\"");
+
+        // PowerShell script to send email via Gmail SMTP
+        String psScript = "$EmailFrom = \"" + SENDER_EMAIL + "\"\n" +
+                         "$EmailTo = \"" + recipientEmail + "\"\n" +
+                         "$Subject = \"" + escapedSubject + "\"\n" +
+                         "$Body = @\"\n" + escapedBody + "\n\"@\n" +
+                         "$SMTPServer = \"smtp.gmail.com\"\n" +
+                         "$SMTPPort = 587\n" +
+                         "$SMTPClient = New-Object Net.Mail.SmtpClient($SMTPServer, $SMTPPort)\n" +
+                         "$SMTPClient.EnableSsl = $true\n" +
+                         "$SMTPClient.Credentials = New-Object System.Net.NetworkCredential(\"" + SENDER_EMAIL + "\", \"" + SENDER_PASSWORD + "\")\n" +
+                         "try {\n" +
+                         "    $SMTPClient.Send($EmailFrom, $EmailTo, $Subject, $Body)\n" +
+                         "    Write-Host \"Email sent successfully!\"\n" +
+                         "} catch {\n" +
+                         "    Write-Host \"Error: $_.Exception.Message\"\n" +
+                         "    exit 1\n" +
+                         "}\n";
+
+        // Write script to temporary file
+        String tempScriptPath = System.getProperty("java.io.tmpdir") + "send_email_" + System.currentTimeMillis() + ".ps1";
+        try (FileWriter fw = new FileWriter(tempScriptPath)) {
+            fw.write(psScript);
+        }
+
+        try {
+            // Execute PowerShell
+            ProcessBuilder pb = new ProcessBuilder(
+                "powershell.exe",
+                "-NoProfile",
+                "-ExecutionPolicy", "Bypass",
+                "-File", tempScriptPath
+            );
+
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+
+            // Read output
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            StringBuilder output = new StringBuilder();
+            while ((line = reader.readLine()) != null) {
+                output.append(line).append("\n");
+            }
+
+            int exitCode = process.waitFor();
+
+            // Clean up temp file
+            new File(tempScriptPath).delete();
+
+            if (exitCode == 0) {
+                System.out.println("\n✅ EMAIL SENT SUCCESSFULLY!");
+                System.out.println("   Recipient: " + recipientEmail);
+                System.out.println("=".repeat(70) + "\n");
+                return true;
+            } else {
+                System.out.println("\n❌ SMTP Error: " + output.toString());
+                System.out.println("=".repeat(70) + "\n");
+                return false;
+            }
+
+        } catch (Exception e) {
+            // Clean up temp file
+            new File(tempScriptPath).delete();
+            throw e;
+        }
+    }
+
+    public static boolean sendLoanDueReminder(String recipientEmail, String userName,
+                                               String loanAmount, String dueDate) {
+        return logUnsupported("Loan Reminder", recipientEmail);
+    }
+
+    public static boolean sendAccountSuspensionWarning(String recipientEmail, String userName,
+                                                        String loanAmount, String daysOverdue) {
+        return logUnsupported("Account Suspension Warning", recipientEmail);
+    }
+
+    public static boolean sendAccountReactivationEmail(String recipientEmail, String userName,
+                                                        String paidAmount) {
+        return logUnsupported("Account Reactivation", recipientEmail);
+    }
+
+    public static boolean sendLoanCreationConfirmation(String recipientEmail, String userName,
+                                                        String loanAmount, String interestRate,
+                                                        String totalPayable, String dueDate,
+                                                        String witnessName, String witnessContact) {
+        return logUnsupported("Loan Confirmation", recipientEmail);
+    }
+
     public static boolean sendPINResetApprovalNotification(String recipientEmail, String userName) {
-        if (recipientEmail == null || recipientEmail.trim().isEmpty()) {
-            System.out.println("EmailNotifier: empty recipient for PIN Reset Approval");
-            return false;
-        }
-
-        String subject = "Caguioa Bank - PIN Reset Request Approved";
-        String body = "Dear " + userName + ",\n\n" +
-                      "Your PIN Reset request has been approved by our administration.\n\n" +
-                      "Please login to your account to receive your OTP and complete the PIN reset process.\n\n" +
-                      "If you have any questions, please contact our support team.\n\n" +
-                      "Best regards,\n" +
-                      "Caguioa Bank Administration";
-
-        System.out.println("EmailNotifier: PIN Reset Approval Notification");
-        System.out.println("Recipient: " + recipientEmail);
-        System.out.println("Sender: " + SENDER_EMAIL);
-        System.out.println("Subject: " + subject);
-        System.out.println("Note: To enable actual email sending, add javax.mail / Jakarta Mail to the project libraries.");
-        return false;
+        return logUnsupported("PIN Reset Approval", recipientEmail);
     }
 
-    /**
-     * Send PIN Reset Denial Notification
-     * @param recipientEmail User's email address
-     * @param userName User's name
-     * @param reason Reason for denial
-     * @return true if email sent successfully
-     */
     public static boolean sendPINResetDenialNotification(String recipientEmail, String userName, String reason) {
-        if (recipientEmail == null || recipientEmail.trim().isEmpty()) {
-            System.out.println("EmailNotifier: empty recipient for PIN Reset Denial");
-            return false;
-        }
+        return logUnsupported("PIN Reset Denial", recipientEmail);
+    }
 
-        String subject = "Caguioa Bank - PIN Reset Request Status";
-        String body = "Dear " + userName + ",\n\n" +
-                      "Your PIN Reset request has been reviewed.\n\n" +
-                      "Status: DENIED\n" +
-                      "Reason: " + reason + "\n\n" +
-                      "If you believe this is an error or need further assistance, please contact our support team.\n\n" +
-                      "Best regards,\n" +
-                      "Caguioa Bank Administration";
-
-        System.out.println("EmailNotifier: PIN Reset Denial Notification");
-        System.out.println("Recipient: " + recipientEmail);
-        System.out.println("Sender: " + SENDER_EMAIL);
-        System.out.println("Subject: " + subject);
-        System.out.println("Note: To enable actual email sending, add javax.mail / Jakarta Mail to the project libraries.");
+    private static boolean logUnsupported(String emailType, String recipientEmail) {
+        System.out.println("⚠️ " + emailType + " - Not yet implemented");
         return false;
     }
 
     public static String testSmtpConnection() {
-        return "Email sending is disabled because javax.mail is not on the project classpath. "
-            + "Add a Mail library to enable EmailNotifier. Current sender email is " + SENDER_EMAIL + ".";
-    }
-
-    private static boolean logUnsupportedEmail(String recipientEmail, String label, String value1, String value2, String value3) {
-        if (recipientEmail == null || recipientEmail.trim().isEmpty()) {
-            System.out.println("EmailNotifier: empty recipient for " + label);
-            return false;
+        if (!credentialsSet || SENDER_EMAIL.equals("your_email@gmail.com")) {
+            return "❌ Gmail credentials NOT configured.";
         }
-
-        System.out.println("EmailNotifier: " + label + " not sent because the Mail library is missing.");
-        System.out.println("Recipient: " + recipientEmail);
-        System.out.println("Sender: " + SENDER_EMAIL);
-        if (value1 != null && !value1.isEmpty()) System.out.println("Value1: " + value1);
-        if (value2 != null && !value2.isEmpty()) System.out.println("Value2: " + value2);
-        if (value3 != null && !value3.isEmpty()) System.out.println("Value3: " + value3);
-        System.out.println("To enable actual email sending, add javax.mail / Jakarta Mail to the project libraries.");
-        return false;
+        return "✅ Gmail credentials configured. Ready to send emails.";
     }
 }
