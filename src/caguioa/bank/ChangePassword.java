@@ -1,8 +1,8 @@
 package caguioa.bank;
 
+import java.awt.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import java.awt.*;
 
 public class ChangePassword extends JDialog {
     
@@ -13,14 +13,18 @@ public class ChangePassword extends JDialog {
     private JLabel statusLabel;
     private int requestId;
 
-    public ChangePassword(Frame owner, int requestId) {
-        super(owner, "Change Password", true);
+    public ChangePassword(Window owner, int requestId) {
+        super(owner, "Change Password", ModalityType.APPLICATION_MODAL);
         this.requestId = requestId;
-        
+
         initializeUI();
         setupListeners();
         pack();
         setLocationRelativeTo(owner);
+    }
+
+    public ChangePassword(Window owner) {
+        this(owner, 0);
     }
 
     private void initializeUI() {

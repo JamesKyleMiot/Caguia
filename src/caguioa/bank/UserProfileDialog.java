@@ -1,11 +1,11 @@
 package caguioa.bank;
 
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 
 /**
  * User Profile Dialog - View and Edit User Information
@@ -18,7 +18,7 @@ public class UserProfileDialog extends JDialog {
     private JTextField usernameField;
     private JTextField ageField;
     private JTextField nationalityField;
-    private JTextField addressField;
+    private JTextArea addressField;
     private JComboBox<String> sexCombo;
     private JLabel balanceLabel;
     private JLabel savingsLabel;
@@ -65,7 +65,7 @@ public class UserProfileDialog extends JDialog {
 
         mainPanel.add(headerPanel, BorderLayout.NORTH);
         mainPanel.add(scrollPane, BorderLayout.CENTER);
-        mainPanel.add(financialPanel, BorderLayout.BEFORE_LINE_END);
+        mainPanel.add(financialPanel, BorderLayout.LINE_END);
         mainPanel.add(buttonPanel, BorderLayout.SOUTH);
 
         setContentPane(mainPanel);
@@ -193,13 +193,15 @@ public class UserProfileDialog extends JDialog {
         gbc.anchor = GridBagConstraints.NORTH;
         formPanel.add(createLabel("Address:"), gbc);
 
-        addressField = new JTextField();
+        addressField = new JTextArea();
         addressField.setEditable(false);
         addressField.setRows(3);
+        addressField.setLineWrap(true);
+        addressField.setWrapStyleWord(true);
         gbc.gridx = 1;
         gbc.weightx = 0.7;
         gbc.fill = GridBagConstraints.BOTH;
-        formPanel.add(addressField, gbc);
+        formPanel.add(new JScrollPane(addressField), gbc);
 
         return formPanel;
     }

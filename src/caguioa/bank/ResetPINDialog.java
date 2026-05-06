@@ -25,6 +25,10 @@ public class ResetPINDialog extends JDialog {
         setLocationRelativeTo(owner);
     }
 
+    public ResetPINDialog(Window owner) {
+        this(owner, Session.userId, 0);
+    }
+
     private void initializeUI() {
         JPanel mainPanel = new JPanel(new BorderLayout(12, 12));
         mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
