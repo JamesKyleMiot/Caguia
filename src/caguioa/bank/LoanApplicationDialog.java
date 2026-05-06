@@ -1,14 +1,14 @@
 package caguioa.bank;
 
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 
 public class LoanApplicationDialog extends JDialog {
 
@@ -350,7 +350,6 @@ public class LoanApplicationDialog extends JDialog {
         // Calculate loan details
         double interestCharge = requestedAmount * INTEREST_RATE;
         double totalPayable = requestedAmount + interestCharge;
-        double remainingBalance = totalPayable;
         LocalDate dueDate = LocalDate.now().plusDays(REPAYMENT_WINDOW_DAYS);
 
         int confirm = JOptionPane.showConfirmDialog(
@@ -430,8 +429,16 @@ public class LoanApplicationDialog extends JDialog {
     }
 
     private LocalDate parseDateOfBirth(String value) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
-        return LocalDate.parse(value, formatter);
+        if (value.equalsIgnoreCase("MM/DD/YYYY")) {
+            throw new IllegalArgumentException("Please enter your date of birth in MM/DD/YYYY format.");
+        }
+
+        try {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+            return LocalDate.parse(value, formatter);
+        } catch (DateTimeParseException ex) {
+            throw new IllegalArgumentException("Please enter your date of birth in MM/DD/YYYY format.");
+        }
     }
 
     private String buildReceipt(double requestedAmount, double interestCharge, double totalPayable, LocalDate dueDate) {
