@@ -255,6 +255,14 @@ public class UserDashboard extends javax.swing.JFrame {
         payLoanBtn.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
         payLoanBtn.addActionListener(evt -> openLoanPayment());
 
+        JButton profileBtn = new JButton("👤 My Profile");
+        profileBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
+        profileBtn.setBackground(new Color(156, 39, 176));
+        profileBtn.setForeground(Color.WHITE);
+        profileBtn.setFocusPainted(false);
+        profileBtn.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
+        profileBtn.addActionListener(evt -> openUserProfile());
+
         JButton refreshBtn = new JButton("🔄 Refresh");
         refreshBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
         refreshBtn.setBackground(new Color(76, 175, 80));
@@ -273,6 +281,7 @@ public class UserDashboard extends javax.swing.JFrame {
 
         headerActions.add(applyLoanBtn);
         headerActions.add(payLoanBtn);
+        headerActions.add(profileBtn);
         headerActions.add(refreshBtn);
         headerActions.add(logoutBtn);
         header.add(headerActions, BorderLayout.EAST);
@@ -1625,6 +1634,12 @@ try {
         }
 
         new LoanPaymentDialog(this, Session.userId).setVisible(true);
+    }
+
+    private void openUserProfile() {
+        UserProfileDialog profileDialog = new UserProfileDialog(this);
+        profileDialog.showDialog();
+        refreshLiveDashboard();
     }
 
     private void CheckBalanceBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CheckBalanceBtnActionPerformed

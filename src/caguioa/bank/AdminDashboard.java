@@ -175,6 +175,24 @@ public class AdminDashboard extends javax.swing.JFrame {
         allUsersTable.getTableHeader().setReorderingAllowed(false);
         allUsersTable.setAutoCreateRowSorter(true);
 
+        // Add double-click listener for user profile
+        allUsersTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                if (evt.getClickCount() == 2) {
+                    int selectedRow = allUsersTable.getSelectedRow();
+                    if (selectedRow != -1) {
+                        // Get the user ID from the first column
+                        Object userId = allUsersTable.getValueAt(selectedRow, 0);
+                        if (userId != null) {
+                            int userIdInt = Integer.parseInt(userId.toString());
+                            openUserProfileForEdit(userIdInt);
+                        }
+                    }
+                }
+            }
+        });
+
         JScrollPane usersScroll = new JScrollPane(allUsersTable);
         usersScroll.setBorder(BorderFactory.createTitledBorder("All Users"));
         tabbedPane.addTab("Users", usersScroll);
@@ -278,6 +296,12 @@ public class AdminDashboard extends javax.swing.JFrame {
         LoanManagementDialog dialog = new LoanManagementDialog(this);
         dialog.setVisible(true);
         // Refresh dashboard after closing the dialog
+        refreshAdminDashboard();
+    }
+
+    private void openUserProfileForEdit(int userId) {
+        AdminUserProfileDialog profileDialog = new AdminUserProfileDialog(this, userId);
+        profileDialog.showDialog();
         refreshAdminDashboard();
     }
 
