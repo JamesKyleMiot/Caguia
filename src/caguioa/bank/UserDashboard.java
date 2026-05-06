@@ -1637,8 +1637,7 @@ try {
     }
 
     private void openUserProfile() {
-        UserProfileDialog profileDialog = new UserProfileDialog(this);
-        profileDialog.showDialog();
+        UserProfileDialog.open(this);
         refreshLiveDashboard();
     }
 

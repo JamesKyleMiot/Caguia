@@ -463,4 +463,9 @@ public class UserProfileDialog extends JDialog {
         loadProfileData();
         setVisible(true);
     }
+
+    public static void open(JFrame parent) {
+        UserProfileDialog dialog = new UserProfileDialog(parent);
+        dialog.showDialog();
+    }
 }
