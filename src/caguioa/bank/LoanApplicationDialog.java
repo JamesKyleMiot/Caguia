@@ -58,16 +58,16 @@ public class LoanApplicationDialog extends JFrame {
         loadAutoFillData();
 
         pack();
-        setMinimumSize(new Dimension(760, 720));
-        setPreferredSize(new Dimension(920, 980));
+        setMinimumSize(new Dimension(640, 600));
+        setPreferredSize(new Dimension(760, 820));
         setResizable(true);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setLocationRelativeTo(owner);
     }
 
     private void initializeUI() {
-        JPanel mainPanel = new JPanel(new BorderLayout(16, 16));
-        mainPanel.setBorder(new EmptyBorder(16, 16, 16, 16));
+        JPanel mainPanel = new JPanel(new BorderLayout(12, 12));
+        mainPanel.setBorder(new EmptyBorder(12, 12, 12, 12));
         mainPanel.setBackground(new Color(242, 248, 252));
 
         // Scrollable content
@@ -75,7 +75,7 @@ public class LoanApplicationDialog extends JFrame {
         contentPanel.setOpaque(false);
         
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 8, 8, 8);
+        gbc.insets = new Insets(5, 6, 5, 6);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1;
         
@@ -83,7 +83,7 @@ public class LoanApplicationDialog extends JFrame {
         
         // Header
         JLabel titleLabel = new JLabel("LOAN APPLICATION FORM");
-        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 20));
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 17));
         titleLabel.setForeground(new Color(0, 102, 51));
         titleLabel.setHorizontalAlignment(SwingConstants.LEFT);
         gbc.gridx = 0;
@@ -169,22 +169,22 @@ public class LoanApplicationDialog extends JFrame {
         gbc.gridwidth = 1;
         
         // Buttons
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0));
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         buttonPanel.setOpaque(false);
 
         submitBtn = new JButton("Submit Application");
-        submitBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
+        submitBtn.setFont(new Font("SansSerif", Font.BOLD, 11));
         submitBtn.setBackground(new Color(33, 150, 243));
         submitBtn.setForeground(Color.WHITE);
         submitBtn.setFocusPainted(false);
-        submitBtn.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+        submitBtn.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
 
         cancelBtn = new JButton("Cancel");
-        cancelBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
+        cancelBtn.setFont(new Font("SansSerif", Font.BOLD, 11));
         cancelBtn.setBackground(new Color(120, 120, 120));
         cancelBtn.setForeground(Color.WHITE);
         cancelBtn.setFocusPainted(false);
-        cancelBtn.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+        cancelBtn.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
 
         buttonPanel.add(cancelBtn);
         buttonPanel.add(submitBtn);
@@ -208,9 +208,9 @@ public class LoanApplicationDialog extends JFrame {
     
     private void addSectionTitle(JPanel panel, String title, int row, GridBagConstraints gbc) {
         JLabel sectionLabel = new JLabel(title);
-        sectionLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
+        sectionLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
         sectionLabel.setForeground(new Color(0, 102, 51));
-        sectionLabel.setBorder(new EmptyBorder(12, 0, 6, 0));
+        sectionLabel.setBorder(new EmptyBorder(8, 0, 4, 0));
         gbc.gridx = 0;
         gbc.gridy = row;
         gbc.gridwidth = 2;
@@ -220,7 +220,7 @@ public class LoanApplicationDialog extends JFrame {
     
     private void addFormField(JPanel panel, String label, JComponent field, int row, GridBagConstraints gbc) {
         JLabel jlabel = new JLabel(label);
-        jlabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        jlabel.setFont(new Font("SansSerif", Font.PLAIN, 11));
         jlabel.setHorizontalAlignment(SwingConstants.LEFT);
         gbc.gridx = 0;
         gbc.gridy = row;
@@ -231,6 +231,7 @@ public class LoanApplicationDialog extends JFrame {
         gbc.gridx = 1;
         gbc.weightx = 1;
         gbc.anchor = GridBagConstraints.HORIZONTAL;
+        field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
         panel.add(field, gbc);
     }
 
