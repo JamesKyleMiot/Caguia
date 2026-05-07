@@ -367,46 +367,188 @@ public class LoanManager {
      * Process loan payment and update remaining balance
      */
     public static boolean processLoanPayment(int loanId, double paymentAmount) {
-        try (Connection conn = DB.connect()) {
+        try (Connection conn = DB.connect();
+             PreparedStatement selectPst = conn.prepareStatement(
+                 "SELECT user_id FROM loans WHERE id = ?")) {
             ensureLoanSchema(conn);
-            // Get current remaining balance
-            String selectQuery = "SELECT remaining_balance, user_id FROM loans WHERE id = ?";
-            PreparedStatement selectPst = conn.prepareStatement(selectQuery);
+
             selectPst.setInt(1, loanId);
-            ResultSet rs = selectPst.executeQuery();
-            
-            double remainingBalance = 0;
-            int userId = 0;
-            if (rs.next()) {
-                remainingBalance = rs.getDouble("remaining_balance");
-                userId = rs.getInt("user_id");
+            try (ResultSet rs = selectPst.executeQuery()) {
+                if (!rs.next()) {
+                    return false;
+                }
+
+                int userId = rs.getInt("user_id");
+                return processLoanPayment(loanId, userId, paymentAmount, "Loan Payment", null) > 0;
             }
-            rs.close();
-            selectPst.close();
-            
-            // Calculate new balance
-            double newBalance = remainingBalance - paymentAmount;
-            String status = newBalance <= 0 ? "paid" : "active";
-            
-            // Update loan
-            String updateQuery = "UPDATE loans SET remaining_balance = ?, status = ? WHERE id = ?";
-            PreparedStatement updatePst = conn.prepareStatement(updateQuery);
-            updatePst.setDouble(1, Math.max(0, newBalance));
-            updatePst.setString(2, status);
-            updatePst.setInt(3, loanId);
-            updatePst.executeUpdate();
-            updatePst.close();
-            
-            // Reactivate account if loan is paid
-            if (status.equals("paid")) {
-                reactivateAccountAfterPayment(loanId, userId);
-            }
-            
-            return true;
         } catch (Exception e) {
             System.out.println("Error processing loan payment: " + e);
             return false;
         }
+    }
+
+    /**
+     * Process loan payment, store the loan payment row, and record the matching transaction.
+     * Returns the inserted loan_payment ID, or -1 on failure.
+     */
+    public static int processLoanPayment(int loanId, int userId, double paymentAmount,
+                                         String paymentMethod, String transactionReference) {
+        if (paymentAmount <= 0) {
+            return -1;
+        }
+
+        Connection conn = null;
+        try {
+            conn = DB.connect();
+            ensureLoanSchema(conn);
+            conn.setAutoCommit(false);
+
+            int loanUserId = 0;
+            double remainingBalance = 0;
+
+            try (PreparedStatement selectPst = conn.prepareStatement(
+                    "SELECT user_id, remaining_balance FROM loans WHERE id = ? FOR UPDATE")) {
+                selectPst.setInt(1, loanId);
+                try (ResultSet rs = selectPst.executeQuery()) {
+                    if (!rs.next()) {
+                        conn.rollback();
+                        return -1;
+                    }
+
+                    loanUserId = rs.getInt("user_id");
+                    remainingBalance = rs.getDouble("remaining_balance");
+                }
+            }
+
+            if (userId > 0 && loanUserId != userId) {
+                conn.rollback();
+                return -1;
+            }
+
+            double appliedAmount = Math.min(paymentAmount, remainingBalance);
+            if (appliedAmount <= 0) {
+                conn.rollback();
+                return -1;
+            }
+
+            double newBalance = Math.max(0, remainingBalance - appliedAmount);
+            String status = newBalance <= 0 ? "paid" : "active";
+            String normalizedMethod = normalizePaymentMethod(paymentMethod);
+            String normalizedReference = normalizeTransactionReference(transactionReference, loanId);
+
+            int paymentId;
+            try (PreparedStatement paymentStmt = conn.prepareStatement(
+                    "INSERT INTO loan_payments (loan_id, user_id, payment_amount, payment_method, payment_status, transaction_reference, notes) " +
+                    "VALUES (?, ?, ?, ?, 'completed', ?, ?)", Statement.RETURN_GENERATED_KEYS)) {
+                paymentStmt.setInt(1, loanId);
+                paymentStmt.setInt(2, loanUserId);
+                paymentStmt.setDouble(3, appliedAmount);
+                paymentStmt.setString(4, normalizedMethod);
+                paymentStmt.setString(5, normalizedReference);
+                paymentStmt.setString(6, "Recorded via loan payment flow");
+                paymentStmt.executeUpdate();
+
+                try (ResultSet generatedKeys = paymentStmt.getGeneratedKeys()) {
+                    if (!generatedKeys.next()) {
+                        conn.rollback();
+                        return -1;
+                    }
+                    paymentId = generatedKeys.getInt(1);
+                }
+            }
+
+            int transactionId;
+            try (PreparedStatement transactionStmt = conn.prepareStatement(
+                    "INSERT INTO transactions (user_id, type, amount, method) VALUES (?, ?, ?, ?)",
+                    Statement.RETURN_GENERATED_KEYS)) {
+                transactionStmt.setInt(1, loanUserId);
+                transactionStmt.setString(2, "Loan Payment");
+                transactionStmt.setDouble(3, appliedAmount);
+                transactionStmt.setString(4, normalizedMethod);
+                transactionStmt.executeUpdate();
+
+                try (ResultSet generatedKeys = transactionStmt.getGeneratedKeys()) {
+                    if (!generatedKeys.next()) {
+                        conn.rollback();
+                        return -1;
+                    }
+                    transactionId = generatedKeys.getInt(1);
+                }
+            }
+
+            try (PreparedStatement linkStmt = conn.prepareStatement(
+                    "UPDATE loan_payments SET transaction_id = ? WHERE id = ?")) {
+                linkStmt.setInt(1, transactionId);
+                linkStmt.setInt(2, paymentId);
+                linkStmt.executeUpdate();
+            }
+
+            try (PreparedStatement updateLoanStmt = conn.prepareStatement(
+                    "UPDATE loans SET remaining_balance = ?, status = ?, is_account_blocked = CASE WHEN ? <= 0 THEN FALSE ELSE is_account_blocked END WHERE id = ?")) {
+                updateLoanStmt.setDouble(1, newBalance);
+                updateLoanStmt.setString(2, status);
+                updateLoanStmt.setDouble(3, newBalance);
+                updateLoanStmt.setInt(4, loanId);
+                updateLoanStmt.executeUpdate();
+            }
+
+            if (newBalance <= 0) {
+                try (PreparedStatement userStmt = conn.prepareStatement(
+                        "UPDATE users SET role = 'user' WHERE id = ?")) {
+                    userStmt.setInt(1, loanUserId);
+                    userStmt.executeUpdate();
+                }
+
+                try (PreparedStatement unblockStmt = conn.prepareStatement(
+                        "UPDATE loans SET is_account_blocked = FALSE WHERE id = ?")) {
+                    unblockStmt.setInt(1, loanId);
+                    unblockStmt.executeUpdate();
+                }
+            }
+
+            conn.commit();
+            return paymentId;
+        } catch (Exception e) {
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (Exception ignored) {
+                }
+            }
+            System.out.println("Error processing loan payment: " + e);
+            return -1;
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                } catch (Exception ignored) {
+                }
+            }
+        }
+    }
+
+    private static String normalizePaymentMethod(String paymentMethod) {
+        if (paymentMethod == null || paymentMethod.trim().isEmpty()) {
+            return "Loan Payment";
+        }
+
+        String method = paymentMethod.trim();
+        if (method.contains("Online Banking")) return "Online Banking";
+        if (method.contains("Mobile App")) return "Mobile App";
+        if (method.contains("Bank Counter")) return "Bank Counter";
+        if (method.contains("Payment Center")) return "Payment Center";
+        if (method.contains("Auto-debit")) return "Auto-debit";
+        if (method.contains("ATM")) return "ATM";
+        return method.replaceAll("^[^A-Za-z0-9]+", "").trim();
+    }
+
+    private static String normalizeTransactionReference(String transactionReference, int loanId) {
+        if (transactionReference != null && !transactionReference.trim().isEmpty()) {
+            return transactionReference.trim();
+        }
+
+        return "LOAN-" + loanId + "-" + System.currentTimeMillis();
     }
     
     /**
