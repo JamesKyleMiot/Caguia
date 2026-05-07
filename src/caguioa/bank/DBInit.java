@@ -1,7 +1,9 @@
 package caguioa.bank;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 
 public class DBInit {
 
@@ -20,6 +22,10 @@ public class DBInit {
                 "fullname VARCHAR(255) NOT NULL, " +
                 "email VARCHAR(255) UNIQUE, " +
                 "password VARCHAR(255), " +
+                "sex VARCHAR(20), " +
+                "age INT, " +
+                "nationality VARCHAR(100), " +
+                "address TEXT, " +
                 "balance DOUBLE DEFAULT 0, " +
                 "savings DOUBLE DEFAULT 0, " +
                 "total_deposit DOUBLE DEFAULT 0, " +
@@ -29,6 +35,11 @@ public class DBInit {
             );
             pst.execute();
             pst.close();
+
+            ensureColumn(con, "users", "sex", "ALTER TABLE users ADD COLUMN sex VARCHAR(20) NULL AFTER password");
+            ensureColumn(con, "users", "age", "ALTER TABLE users ADD COLUMN age INT NULL AFTER sex");
+            ensureColumn(con, "users", "nationality", "ALTER TABLE users ADD COLUMN nationality VARCHAR(100) NULL AFTER age");
+            ensureColumn(con, "users", "address", "ALTER TABLE users ADD COLUMN address TEXT NULL AFTER nationality");
 
             // admin
             pst = con.prepareStatement(
@@ -119,6 +130,21 @@ public class DBInit {
         } catch (Exception e) {
             System.out.println("DBInit.ensureAllTables error: " + e);
             return false;
+        }
+    }
+
+    private static void ensureColumn(Connection con, String table, String column, String alterSql) {
+        try {
+            DatabaseMetaData meta = con.getMetaData();
+            try (ResultSet columns = meta.getColumns(con.getCatalog(), null, table, column)) {
+                if (!columns.next()) {
+                    try (PreparedStatement pst = con.prepareStatement(alterSql)) {
+                        pst.executeUpdate();
+                    }
+                }
+            }
+        } catch (java.sql.SQLException e) {
+            System.out.println("DBInit.ensureColumn error for " + table + "." + column + ": " + e);
         }
     }
 }

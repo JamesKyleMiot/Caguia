@@ -22,6 +22,8 @@ public class UserProfileDialog extends JDialog {
     private JComboBox<String> sexCombo;
     private JLabel balanceLabel;
     private JLabel savingsLabel;
+    private JLabel totalDepositLabel;
+    private JLabel accountCreatedLabel;
     private JLabel roleLabel;
     private JButton editButton;
     private JButton saveButton;
@@ -207,7 +209,7 @@ public class UserProfileDialog extends JDialog {
     }
 
     private JPanel createFinancialPanel() {
-        JPanel financialPanel = new JPanel(new GridLayout(3, 1, 10, 10));
+        JPanel financialPanel = new JPanel(new GridLayout(5, 1, 10, 10));
         financialPanel.setBackground(Color.WHITE);
         financialPanel.setBorder(BorderFactory.createTitledBorder(
             BorderFactory.createLineBorder(new Color(100, 200, 150)),
@@ -228,6 +230,16 @@ public class UserProfileDialog extends JDialog {
         JPanel savingsCard = createInfoCard("Savings", "₱0.00");
         savingsLabel = (JLabel) savingsCard.getComponent(1);
         financialPanel.add(savingsCard);
+
+        // Total Deposit Card
+        JPanel depositCard = createInfoCard("Total Deposit", "₱0.00");
+        totalDepositLabel = (JLabel) depositCard.getComponent(1);
+        financialPanel.add(depositCard);
+
+        // Account Created Card
+        JPanel createdCard = createInfoCard("Account Created", "N/A");
+        accountCreatedLabel = (JLabel) createdCard.getComponent(1);
+        financialPanel.add(createdCard);
 
         // Role Card
         JPanel roleCard = createInfoCard("Account Type", "User");
@@ -326,30 +338,27 @@ public class UserProfileDialog extends JDialog {
     }
 
     private void loadProfileData() {
-        try {
-            Connection con = DB.connect();
-            PreparedStatement pst = con.prepareStatement(
-                "SELECT username, fullname, email, sex, age, nationality, address, balance, savings, role FROM users WHERE id = ?"
-            );
+        try (Connection con = DB.connect();
+             PreparedStatement pst = con.prepareStatement(
+                 "SELECT username, fullname, email, sex, age, nationality, address, balance, savings, total_deposit, role, created_at FROM users WHERE id = ?"
+             )) {
             pst.setInt(1, Session.userId);
-            ResultSet rs = pst.executeQuery();
-
-            if (rs.next()) {
-                usernameField.setText(rs.getString("username"));
-                fullnameField.setText(rs.getString("fullname"));
-                emailField.setText(rs.getString("email"));
-                sexCombo.setSelectedItem(rs.getString("sex"));
-                ageField.setText(String.valueOf(rs.getInt("age")));
-                nationalityField.setText(rs.getString("nationality"));
-                addressField.setText(rs.getString("address"));
-                balanceLabel.setText("₱" + String.format("%.2f", rs.getDouble("balance")));
-                savingsLabel.setText("₱" + String.format("%.2f", rs.getDouble("savings")));
-                roleLabel.setText(rs.getString("role"));
+            try (ResultSet rs = pst.executeQuery()) {
+                if (rs.next()) {
+                    usernameField.setText(rs.getString("username"));
+                    fullnameField.setText(rs.getString("fullname"));
+                    emailField.setText(rs.getString("email"));
+                    sexCombo.setSelectedItem(rs.getString("sex"));
+                    ageField.setText(String.valueOf(rs.getInt("age")));
+                    nationalityField.setText(rs.getString("nationality"));
+                    addressField.setText(rs.getString("address"));
+                    balanceLabel.setText("₱" + String.format("%.2f", rs.getDouble("balance")));
+                    savingsLabel.setText("₱" + String.format("%.2f", rs.getDouble("savings")));
+                    totalDepositLabel.setText("₱" + String.format("%.2f", rs.getDouble("total_deposit")));
+                    roleLabel.setText(rs.getString("role"));
+                    accountCreatedLabel.setText(String.valueOf(rs.getTimestamp("created_at")));
+                }
             }
-
-            rs.close();
-            pst.close();
-            con.close();
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error loading profile: " + e.getMessage());
         }
@@ -417,11 +426,10 @@ public class UserProfileDialog extends JDialog {
         }
 
         // Update database
-        try {
-            Connection con = DB.connect();
-            PreparedStatement pst = con.prepareStatement(
-                "UPDATE users SET fullname = ?, email = ?, sex = ?, age = ?, nationality = ?, address = ? WHERE id = ?"
-            );
+        try (Connection con = DB.connect();
+             PreparedStatement pst = con.prepareStatement(
+                 "UPDATE users SET fullname = ?, email = ?, sex = ?, age = ?, nationality = ?, address = ? WHERE id = ?"
+             )) {
             pst.setString(1, fullnameField.getText().trim());
             pst.setString(2, emailField.getText().trim());
             pst.setString(3, (String) sexCombo.getSelectedItem());
@@ -431,8 +439,6 @@ public class UserProfileDialog extends JDialog {
             pst.setInt(7, Session.userId);
 
             pst.executeUpdate();
-            pst.close();
-            con.close();
 
             // Update session
             Session.fullname = fullnameField.getText();

@@ -2,7 +2,6 @@ package caguioa.bank;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -14,7 +13,7 @@ import java.sql.ResultSet;
  */
 public class AdminUserProfileDialog extends JDialog {
     
-    private int selectedUserId;
+    private final int selectedUserId;
     private JTextField fullnameField;
     private JTextField emailField;
     private JTextField usernameField;
@@ -335,31 +334,26 @@ public class AdminUserProfileDialog extends JDialog {
     }
 
     private void loadProfileData() {
-        try {
-            Connection con = DB.connect();
-            PreparedStatement pst = con.prepareStatement(
-                "SELECT username, fullname, email, sex, age, nationality, address, balance, savings, total_deposit, created_at FROM users WHERE id = ?"
-            );
+        try (Connection con = DB.connect();
+             PreparedStatement pst = con.prepareStatement(
+                 "SELECT username, fullname, email, sex, age, nationality, address, balance, savings, total_deposit, created_at FROM users WHERE id = ?"
+             )) {
             pst.setInt(1, selectedUserId);
-            ResultSet rs = pst.executeQuery();
-
-            if (rs.next()) {
-                usernameField.setText(rs.getString("username"));
-                fullnameField.setText(rs.getString("fullname"));
-                emailField.setText(rs.getString("email"));
-                sexCombo.setSelectedItem(rs.getString("sex"));
-                ageField.setText(String.valueOf(rs.getInt("age")));
-                nationalityField.setText(rs.getString("nationality"));
-                addressField.setText(rs.getString("address"));
-                balanceLabel.setText("₱" + String.format("%.2f", rs.getDouble("balance")));
-                savingsLabel.setText("₱" + String.format("%.2f", rs.getDouble("savings")));
-                totalDepositLabel.setText("₱" + String.format("%.2f", rs.getDouble("total_deposit")));
-                accountCreatedLabel.setText(rs.getString("created_at"));
+            try (ResultSet rs = pst.executeQuery()) {
+                if (rs.next()) {
+                    usernameField.setText(rs.getString("username"));
+                    fullnameField.setText(rs.getString("fullname"));
+                    emailField.setText(rs.getString("email"));
+                    sexCombo.setSelectedItem(rs.getString("sex"));
+                    ageField.setText(String.valueOf(rs.getInt("age")));
+                    nationalityField.setText(rs.getString("nationality"));
+                    addressField.setText(rs.getString("address"));
+                    balanceLabel.setText("₱" + String.format("%.2f", rs.getDouble("balance")));
+                    savingsLabel.setText("₱" + String.format("%.2f", rs.getDouble("savings")));
+                    totalDepositLabel.setText("₱" + String.format("%.2f", rs.getDouble("total_deposit")));
+                    accountCreatedLabel.setText(rs.getString("created_at"));
+                }
             }
-
-            rs.close();
-            pst.close();
-            con.close();
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error loading profile: " + e.getMessage());
         }
@@ -426,11 +420,10 @@ public class AdminUserProfileDialog extends JDialog {
         }
 
         // Update database
-        try {
-            Connection con = DB.connect();
-            PreparedStatement pst = con.prepareStatement(
-                "UPDATE users SET fullname = ?, email = ?, sex = ?, age = ?, nationality = ?, address = ? WHERE id = ?"
-            );
+        try (Connection con = DB.connect();
+             PreparedStatement pst = con.prepareStatement(
+                 "UPDATE users SET fullname = ?, email = ?, sex = ?, age = ?, nationality = ?, address = ? WHERE id = ?"
+             )) {
             pst.setString(1, fullnameField.getText().trim());
             pst.setString(2, emailField.getText().trim());
             pst.setString(3, (String) sexCombo.getSelectedItem());
@@ -440,8 +433,6 @@ public class AdminUserProfileDialog extends JDialog {
             pst.setInt(7, selectedUserId);
 
             pst.executeUpdate();
-            pst.close();
-            con.close();
 
             JOptionPane.showMessageDialog(this, "User profile updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
             setEditMode(false);
@@ -463,15 +454,12 @@ public class AdminUserProfileDialog extends JDialog {
             JOptionPane.WARNING_MESSAGE);
 
         if (confirm == JOptionPane.YES_OPTION) {
-            try {
-                Connection con = DB.connect();
-                PreparedStatement pst = con.prepareStatement(
-                    "UPDATE users SET status = 'suspended' WHERE id = ?"
-                );
+            try (Connection con = DB.connect();
+                 PreparedStatement pst = con.prepareStatement(
+                     "UPDATE users SET role = 'suspended' WHERE id = ?"
+                 )) {
                 pst.setInt(1, selectedUserId);
                 pst.executeUpdate();
-                pst.close();
-                con.close();
 
                 JOptionPane.showMessageDialog(this, "Account suspended successfully", "Success", JOptionPane.INFORMATION_MESSAGE);
                 dispose();
