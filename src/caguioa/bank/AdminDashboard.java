@@ -701,14 +701,19 @@ public class AdminDashboard extends javax.swing.JFrame {
             updatePst.setInt(3, applicationId);
             updatePst.executeUpdate();
 
-            // Create loan record
+            // Create loan record with required fields
+            double interestRate = 5.0; // Default 5% interest
+            double totalPayable = approvedAmount + (approvedAmount * interestRate / 100);
+            
             PreparedStatement loanPst = con.prepareStatement(
-                "INSERT INTO loans (user_id, amount, remaining_balance, status, created_at) VALUES (?, ?, ?, 'active', NOW())",
+                "INSERT INTO loans (user_id, amount, interest_rate, total_payable, remaining_balance, status, created_at) VALUES (?, ?, ?, ?, ?, 'active', NOW())",
                 Statement.RETURN_GENERATED_KEYS
             );
             loanPst.setInt(1, userId);
             loanPst.setDouble(2, approvedAmount);
-            loanPst.setDouble(3, approvedAmount);
+            loanPst.setDouble(3, interestRate);
+            loanPst.setDouble(4, totalPayable);
+            loanPst.setDouble(5, totalPayable);
             loanPst.executeUpdate();
 
             int loanId = -1;

@@ -62,13 +62,18 @@ public class TestApprovalExecution {
                     System.out.println("✓ Application updated: " + updated + " row(s)");
                 }
 
-                // Create loan
-                String loanQuery = "INSERT INTO loans (user_id, amount, remaining_balance, status, created_at) VALUES (?, ?, ?, 'active', NOW())";
+                // Create loan with required fields
+                double interestRate = 5.0; // Default 5% interest
+                double totalPayable = amount + (amount * interestRate / 100);
+                
+                String loanQuery = "INSERT INTO loans (user_id, amount, interest_rate, total_payable, remaining_balance, status, created_at) VALUES (?, ?, ?, ?, ?, 'active', NOW())";
                 int loanId = 0;
                 try (PreparedStatement stmt = con.prepareStatement(loanQuery, Statement.RETURN_GENERATED_KEYS)) {
                     stmt.setInt(1, userId);
                     stmt.setDouble(2, amount);
-                    stmt.setDouble(3, amount);
+                    stmt.setDouble(3, interestRate);
+                    stmt.setDouble(4, totalPayable);
+                    stmt.setDouble(5, totalPayable);
                     stmt.executeUpdate();
                     
                     try (ResultSet rs = stmt.getGeneratedKeys()) {
