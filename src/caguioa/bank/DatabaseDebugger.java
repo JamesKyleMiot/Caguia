@@ -52,21 +52,20 @@ public class DatabaseDebugger {
             try (PreparedStatement pst = conn.prepareStatement(loansQuery)) {
                 pst.setInt(1, userId);
                 try (ResultSet rs = pst.executeQuery()) {
-                    if (!rs.next()) {
+                    int loanCount = 0;
+                    while (rs.next()) {
+                        loanCount++;
+                        System.out.println("\nLoan #" + loanCount + ":");
+                        System.out.println("  - ID: " + rs.getInt("id"));
+                        System.out.println("  - Amount: ₱" + rs.getDouble("amount"));
+                        System.out.println("  - Total Payable: ₱" + rs.getDouble("total_payable"));
+                        System.out.println("  - Remaining Balance: ₱" + rs.getDouble("remaining_balance"));
+                        System.out.println("  - Status: " + rs.getString("status"));
+                        System.out.println("  - Created: " + rs.getTimestamp("created_at"));
+                    }
+                    if (loanCount == 0) {
                         System.out.println("❌ No loans found for this user!");
                     } else {
-                        rs.beforeFirst();
-                        int loanCount = 0;
-                        while (rs.next()) {
-                            loanCount++;
-                            System.out.println("\nLoan #" + loanCount + ":");
-                            System.out.println("  - ID: " + rs.getInt("id"));
-                            System.out.println("  - Amount: ₱" + rs.getDouble("amount"));
-                            System.out.println("  - Total Payable: ₱" + rs.getDouble("total_payable"));
-                            System.out.println("  - Remaining Balance: ₱" + rs.getDouble("remaining_balance"));
-                            System.out.println("  - Status: " + rs.getString("status"));
-                            System.out.println("  - Created: " + rs.getTimestamp("created_at"));
-                        }
                         System.out.println("\n✓ Total loans: " + loanCount);
                     }
                 }
@@ -78,21 +77,20 @@ public class DatabaseDebugger {
             try (PreparedStatement pst = conn.prepareStatement(paymentsQuery)) {
                 pst.setInt(1, userId);
                 try (ResultSet rs = pst.executeQuery()) {
-                    if (!rs.next()) {
+                    int paymentCount = 0;
+                    while (rs.next()) {
+                        paymentCount++;
+                        System.out.println("\nPayment #" + paymentCount + ":");
+                        System.out.println("  - Payment ID: " + rs.getInt("id"));
+                        System.out.println("  - Loan ID: " + rs.getInt("loan_id"));
+                        System.out.println("  - Amount: ₱" + rs.getDouble("payment_amount"));
+                        System.out.println("  - Method: " + rs.getString("payment_method"));
+                        System.out.println("  - Status: " + rs.getString("payment_status"));
+                        System.out.println("  - Date: " + rs.getTimestamp("paid_date"));
+                    }
+                    if (paymentCount == 0) {
                         System.out.println("ℹ No payment records found");
                     } else {
-                        rs.beforeFirst();
-                        int paymentCount = 0;
-                        while (rs.next()) {
-                            paymentCount++;
-                            System.out.println("\nPayment #" + paymentCount + ":");
-                            System.out.println("  - Payment ID: " + rs.getInt("id"));
-                            System.out.println("  - Loan ID: " + rs.getInt("loan_id"));
-                            System.out.println("  - Amount: ₱" + rs.getDouble("payment_amount"));
-                            System.out.println("  - Method: " + rs.getString("payment_method"));
-                            System.out.println("  - Status: " + rs.getString("payment_status"));
-                            System.out.println("  - Date: " + rs.getTimestamp("paid_date"));
-                        }
                         System.out.println("\n✓ Total payments: " + paymentCount);
                     }
                 }
@@ -104,20 +102,19 @@ public class DatabaseDebugger {
             try (PreparedStatement pst = conn.prepareStatement(txnQuery)) {
                 pst.setInt(1, userId);
                 try (ResultSet rs = pst.executeQuery()) {
-                    if (!rs.next()) {
+                    int txnCount = 0;
+                    while (rs.next()) {
+                        txnCount++;
+                        System.out.println("\nTransaction #" + txnCount + ":");
+                        System.out.println("  - ID: " + rs.getInt("id"));
+                        System.out.println("  - Type: " + rs.getString("type"));
+                        System.out.println("  - Amount: ₱" + rs.getDouble("amount"));
+                        System.out.println("  - Method: " + rs.getString("method"));
+                        System.out.println("  - Date: " + rs.getTimestamp("created_at"));
+                    }
+                    if (txnCount == 0) {
                         System.out.println("ℹ No transaction records found");
                     } else {
-                        rs.beforeFirst();
-                        int txnCount = 0;
-                        while (rs.next()) {
-                            txnCount++;
-                            System.out.println("\nTransaction #" + txnCount + ":");
-                            System.out.println("  - ID: " + rs.getInt("id"));
-                            System.out.println("  - Type: " + rs.getString("type"));
-                            System.out.println("  - Amount: ₱" + rs.getDouble("amount"));
-                            System.out.println("  - Method: " + rs.getString("method"));
-                            System.out.println("  - Date: " + rs.getTimestamp("created_at"));
-                        }
                         System.out.println("\n✓ Total transactions: " + txnCount);
                     }
                 }
