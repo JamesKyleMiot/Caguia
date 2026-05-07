@@ -11,7 +11,7 @@ import java.sql.ResultSet;
  * Admin User Profile Manager
  * Allows admins to view and edit user profiles
  */
-public class AdminUserProfileDialog extends JDialog {
+public class AdminUserProfileDialog extends JDialog { //oten
     
     private final int selectedUserId;
     private JTextField fullnameField;
