@@ -659,4 +659,70 @@ public class LoanManager {
         return null;
     }
 
+    /**
+     * Get loan application transactions for a user
+     */
+    public static List<Map<String, Object>> getUserLoanApplicationTransactions(int userId) {
+        List<Map<String, Object>> transactions = new ArrayList<>();
+        try (Connection conn = DB.connect()) {
+            String query = "SELECT la.id, la.requested_amount, la.loan_amount, la.status as app_status, la.created_at, " +
+                          "t.id as txn_id, t.type, t.amount, t.method, t.created_at as txn_date " +
+                          "FROM loan_applications la " +
+                          "LEFT JOIN transactions t ON t.user_id = la.user_id AND t.type = 'Loan Application' AND DATE(t.created_at) = DATE(la.created_at) " +
+                          "WHERE la.user_id = ? " +
+                          "ORDER BY la.created_at DESC";
+            try (PreparedStatement pst = conn.prepareStatement(query)) {
+                pst.setInt(1, userId);
+                try (ResultSet rs = pst.executeQuery()) {
+                    while (rs.next()) {
+                        Map<String, Object> txn = new HashMap<>();
+                        txn.put("app_id", rs.getInt("id"));
+                        txn.put("requested_amount", rs.getDouble("requested_amount"));
+                        txn.put("approved_amount", rs.getDouble("loan_amount"));
+                        txn.put("app_status", rs.getString("app_status"));
+                        txn.put("created_at", rs.getTimestamp("created_at"));
+                        txn.put("txn_type", "Loan Application");
+                        transactions.add(txn);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error getting loan application transactions: " + e);
+        }
+        return transactions;
+    }
+
+    /**
+     * Get all loan application transactions for admin (all users)
+     */
+    public static List<Map<String, Object>> getAllLoanApplicationTransactions() {
+        List<Map<String, Object>> transactions = new ArrayList<>();
+        try (Connection conn = DB.connect()) {
+            String query = "SELECT la.id, la.user_id, u.username, u.fullname, la.requested_amount, la.loan_amount, " +
+                          "la.status as app_status, la.created_at " +
+                          "FROM loan_applications la " +
+                          "JOIN users u ON la.user_id = u.id " +
+                          "ORDER BY la.created_at DESC LIMIT 100";
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery(query)) {
+                while (rs.next()) {
+                    Map<String, Object> txn = new HashMap<>();
+                    txn.put("app_id", rs.getInt("id"));
+                    txn.put("user_id", rs.getInt("user_id"));
+                    txn.put("username", rs.getString("username"));
+                    txn.put("fullname", rs.getString("fullname"));
+                    txn.put("requested_amount", rs.getDouble("requested_amount"));
+                    txn.put("approved_amount", rs.getDouble("loan_amount"));
+                    txn.put("app_status", rs.getString("app_status"));
+                    txn.put("created_at", rs.getTimestamp("created_at"));
+                    txn.put("txn_type", "Loan Application");
+                    transactions.add(txn);
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error getting all loan application transactions: " + e);
+        }
+        return transactions;
+    }
+
 }

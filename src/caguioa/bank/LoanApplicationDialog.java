@@ -419,6 +419,16 @@ public class LoanApplicationDialog extends JFrame {
             pst.setBoolean(23, declarationCheckbox.isSelected());
             pst.executeUpdate();
 
+            // Record this loan application as a transaction
+            try (PreparedStatement txnStmt = conn.prepareStatement(
+                    "INSERT INTO transactions (user_id, type, amount, method) VALUES (?, ?, ?, ?)")) {
+                txnStmt.setInt(1, userId);
+                txnStmt.setString(2, "Loan Application");
+                txnStmt.setDouble(3, requestedAmount);
+                txnStmt.setString(4, "Loan Application");
+                txnStmt.executeUpdate();
+            }
+
             String receipt = buildReceipt(requestedAmount, interestCharge, totalPayable, dueDate);
             JTextArea receiptArea = new JTextArea(receipt);
             receiptArea.setEditable(false);
