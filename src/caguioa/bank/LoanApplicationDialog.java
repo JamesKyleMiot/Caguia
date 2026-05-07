@@ -58,8 +58,8 @@ public class LoanApplicationDialog extends JDialog {
         loadAutoFillData();
 
         pack();
-        setSize(900, 1000);
-        setMinimumSize(new Dimension(850, 900));
+        setMinimumSize(new Dimension(760, 720));
+        setPreferredSize(new Dimension(920, 980));
         setLocationRelativeTo(owner);
     }
 
@@ -83,9 +83,11 @@ public class LoanApplicationDialog extends JDialog {
         JLabel titleLabel = new JLabel("LOAN APPLICATION FORM");
         titleLabel.setFont(new Font("SansSerif", Font.BOLD, 20));
         titleLabel.setForeground(new Color(0, 102, 51));
+        titleLabel.setHorizontalAlignment(SwingConstants.LEFT);
         gbc.gridx = 0;
         gbc.gridy = row++;
         gbc.gridwidth = 2;
+        gbc.anchor = GridBagConstraints.WEST;
         contentPanel.add(titleLabel, gbc);
         gbc.gridwidth = 1;
         
@@ -219,14 +221,16 @@ public class LoanApplicationDialog extends JDialog {
     private void addFormField(JPanel panel, String label, JComponent field, int row, GridBagConstraints gbc) {
         JLabel jlabel = new JLabel(label);
         jlabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        jlabel.setHorizontalAlignment(SwingConstants.LEFT);
         gbc.gridx = 0;
         gbc.gridy = row;
         gbc.weightx = 0;
+        gbc.anchor = GridBagConstraints.WEST;
         panel.add(jlabel, gbc);
         
         gbc.gridx = 1;
         gbc.weightx = 1;
-        field.setPreferredSize(new Dimension(300, 25));
+        gbc.anchor = GridBagConstraints.HORIZONTAL;
         panel.add(field, gbc);
     }
 
@@ -355,13 +359,21 @@ public class LoanApplicationDialog extends JDialog {
 
         int confirm = JOptionPane.showConfirmDialog(
             this,
-            "Submit this loan application?\n\n" +
-                "Full Name: " + fullNameField.getText() + "\n" +
-                "Loan Amount: " + formatMoney(requestedAmount) + "\n" +
-                "Interest: " + formatMoney(interestCharge) + "\n" +
-                "Total Payable: " + formatMoney(totalPayable) + "\n" +
-                "Due Date: " + dueDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")) + "\n" +
-                "Approval: Admin review required",
+            String.format("""
+                Submit this loan application?
+
+                Full Name: %s
+                Loan Amount: %s
+                Interest: %s
+                Total Payable: %s
+                Due Date: %s
+                Approval: Admin review required
+                """,
+                fullNameField.getText(),
+                formatMoney(requestedAmount),
+                formatMoney(interestCharge),
+                formatMoney(totalPayable),
+                dueDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy"))),
             "Confirm Loan Application",
             JOptionPane.YES_NO_OPTION
         );
@@ -444,25 +456,36 @@ public class LoanApplicationDialog extends JDialog {
     }
 
     private String buildReceipt(double requestedAmount, double interestCharge, double totalPayable, LocalDate dueDate) {
-        return "CAGUIOA BANK\n"
-            + "Loan Application Receipt\n"
-            + "---------------------------------------------\n"
-            + "Applicant: " + fullNameField.getText() + "\n"
-            + "Email: " + emailField.getText() + "\n"
-            + "Contact: " + contactNumberField.getText() + "\n"
-            + "---------------------------------------------\n"
-            + "Loan Amount: " + formatMoney(requestedAmount) + "\n"
-            + "Purpose: " + loanPurposeField.getText() + "\n"
-            + "Loan Term: 6 months\n"
-            + "Interest Rate: 2.00%\n"
-            + "Interest Charge: " + formatMoney(interestCharge) + "\n"
-            + "Total Payable: " + formatMoney(totalPayable) + "\n"
-            + "Due Date: " + dueDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")) + "\n"
-            + "Status: PENDING ADMIN APPROVAL\n"
-            + "Date Applied: " + LocalDate.now().format(DateTimeFormatter.ISO_DATE) + "\n"
-            + "---------------------------------------------\n"
-            + "Your loan application has been submitted.\n"
-            + "Please wait for approval notification.";
+        return String.format("""
+            CAGUIOA BANK
+            Loan Application Receipt
+            ---------------------------------------------
+            Applicant: %s
+            Email: %s
+            Contact: %s
+            ---------------------------------------------
+            Loan Amount: %s
+            Purpose: %s
+            Loan Term: 6 months
+            Interest Rate: 2.00%%
+            Interest Charge: %s
+            Total Payable: %s
+            Due Date: %s
+            Status: PENDING ADMIN APPROVAL
+            Date Applied: %s
+            ---------------------------------------------
+            Your loan application has been submitted.
+            Please wait for approval notification.
+            """,
+            fullNameField.getText(),
+            emailField.getText(),
+            contactNumberField.getText(),
+            formatMoney(requestedAmount),
+            loanPurposeField.getText(),
+            formatMoney(interestCharge),
+            formatMoney(totalPayable),
+            dueDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
+            LocalDate.now().format(DateTimeFormatter.ISO_DATE));
     }
 
     private void loadAutoFillData() {
