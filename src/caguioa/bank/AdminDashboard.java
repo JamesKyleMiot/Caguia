@@ -668,7 +668,7 @@ public class AdminDashboard extends javax.swing.JFrame {
 
             // Get application details
             PreparedStatement getPst = con.prepareStatement(
-                "SELECT user_id, loan_amount_requested FROM loan_applications WHERE id=?"
+                "SELECT user_id, requested_amount FROM loan_applications WHERE id=?"
             );
             getPst.setInt(1, applicationId);
             ResultSet rs = getPst.executeQuery();
@@ -679,7 +679,7 @@ public class AdminDashboard extends javax.swing.JFrame {
             }
 
             int userId = rs.getInt("user_id");
-            double loanAmount = rs.getDouble("loan_amount_requested");
+            double loanAmount = rs.getDouble("requested_amount");
 
             // Ask for approved amount (can be different from requested)
             String amountStr = JOptionPane.showInputDialog(dialog,
@@ -692,32 +692,53 @@ public class AdminDashboard extends javax.swing.JFrame {
 
             double approvedAmount = Double.parseDouble(amountStr);
 
-            // Approve the application using database function
-            PreparedStatement approvePst = con.prepareStatement(
-                "SELECT approve_loan_application(?, ?, ?) AS loan_id"
+            // Update the loan application directly
+            PreparedStatement updatePst = con.prepareStatement(
+                "UPDATE loan_applications SET status='approved', admin_id=?, approved_at=NOW(), approved_amount=? WHERE id=?"
             );
-            approvePst.setInt(1, applicationId);
-            approvePst.setInt(2, Session.adminId);
-            approvePst.setDouble(3, approvedAmount);
-            ResultSet approveRs = approvePst.executeQuery();
+            updatePst.setInt(1, Session.adminId);
+            updatePst.setDouble(2, approvedAmount);
+            updatePst.setInt(3, applicationId);
+            updatePst.executeUpdate();
 
-            if (approveRs.next()) {
-                int loanId = approveRs.getInt("loan_id");
-                JOptionPane.showMessageDialog(dialog,
-                    "✓ Application approved!\n\n" +
-                    "Loan ID: " + loanId + "\n" +
-                    "Amount: ₱" + String.format("%.2f", approvedAmount) + "\n" +
-                    "Interest: 2% (₱" + String.format("%.2f", approvedAmount * 0.02) + ")\n" +
-                    "Total Payable: ₱" + String.format("%.2f", approvedAmount * 1.02) + "\n" +
-                    "Term: 6 months\n" +
-                    "Status: Active",
-                    "Approval Successful",
-                    JOptionPane.INFORMATION_MESSAGE);
+            // Create loan record
+            PreparedStatement loanPst = con.prepareStatement(
+                "INSERT INTO loans (user_id, amount, remaining_balance, status, created_at) VALUES (?, ?, ?, 'active', NOW())",
+                Statement.RETURN_GENERATED_KEYS
+            );
+            loanPst.setInt(1, userId);
+            loanPst.setDouble(2, approvedAmount);
+            loanPst.setDouble(3, approvedAmount);
+            loanPst.executeUpdate();
 
-                // Refresh the table
-                openLoanApplicationsDialog();
-                dialog.dispose();
+            int loanId = -1;
+            ResultSet loanRs = loanPst.getGeneratedKeys();
+            if (loanRs.next()) {
+                loanId = loanRs.getInt(1);
             }
+
+            // Record transaction
+            PreparedStatement txnPst = con.prepareStatement(
+                "INSERT INTO transactions (user_id, type, amount, method) VALUES (?, 'Loan Disbursement', ?, 'Loan Approval')"
+            );
+            txnPst.setInt(1, userId);
+            txnPst.setDouble(2, approvedAmount);
+            txnPst.executeUpdate();
+
+            JOptionPane.showMessageDialog(dialog,
+                "✓ Application approved!\n\n" +
+                "Loan ID: " + loanId + "\n" +
+                "Amount: ₱" + String.format("%.2f", approvedAmount) + "\n" +
+                "Interest: 2% (₱" + String.format("%.2f", approvedAmount * 0.02) + ")\n" +
+                "Total Payable: ₱" + String.format("%.2f", approvedAmount * 1.02) + "\n" +
+                "Term: 6 months\n" +
+                "Status: Active",
+                "Approval Successful",
+                JOptionPane.INFORMATION_MESSAGE);
+
+            // Refresh the table
+            openLoanApplicationsDialog();
+            dialog.dispose();
         } catch (NumberFormatException nfe) {
             JOptionPane.showMessageDialog(dialog, "Please enter a valid amount.", "Invalid Input", JOptionPane.ERROR_MESSAGE);
         } catch (Exception e) {
