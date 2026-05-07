@@ -58,6 +58,15 @@ public class LoanApplicationDialog extends JFrame {
         // Ensure loan-related tables/columns are available before loading form data.
         LoanManager.ensureLoanSystemSchema();
 
+        if (LoanApplicationHelper.hasActiveLoan(userId)) {
+            JOptionPane.showMessageDialog(owner,
+                "You already have an active loan. Please pay it in full before applying for another loan.",
+                "Active Loan Exists",
+                JOptionPane.WARNING_MESSAGE);
+            dispose();
+            return;
+        }
+
         initializeUI();
         loadAutoFillData();
 
@@ -241,6 +250,14 @@ public class LoanApplicationDialog extends JFrame {
 
 
     private void submitApplication() {
+        if (LoanApplicationHelper.hasActiveLoan(userId)) {
+            JOptionPane.showMessageDialog(this,
+                "You already have an active loan. Please pay it in full before submitting a new application.",
+                "Active Loan Exists",
+                JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
         if (LoanApplicationHelper.hasPendingApplication(userId)) {
             JOptionPane.showMessageDialog(this,
                 "You already have a pending loan application. Please wait for admin review before submitting another one.",

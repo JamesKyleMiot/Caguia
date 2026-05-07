@@ -1576,19 +1576,14 @@ try {
     private void openLoanApplication() {
         Map<String, Object> activeLoan = getActiveLoanForCurrentUser();
         if (activeLoan != null) {
-            boolean paidLoan = promptPaymentForActiveLoan(activeLoan);
-            if (!paidLoan) {
-                return;
-            }
-
-            Map<String, Object> refreshedLoan = getActiveLoanForCurrentUser();
-            if (refreshedLoan != null) {
-                JOptionPane.showMessageDialog(this,
-                    "You still have an active loan. Please pay it in full before applying for another loan.",
-                    "Active Loan Exists",
-                    JOptionPane.WARNING_MESSAGE);
-                return;
-            }
+            double remainingBalance = (Double) activeLoan.get("remaining_balance");
+            JOptionPane.showMessageDialog(this,
+                "You already have an active loan.\n\n" +
+                "Remaining balance: ₱" + String.format("%.2f", remainingBalance) + "\n\n" +
+                "Please pay the loan in full before applying for another loan.",
+                "Active Loan Exists",
+                JOptionPane.WARNING_MESSAGE);
+            return;
         }
 
         new LoanApplicationDialog(this, Session.userId).setVisible(true);

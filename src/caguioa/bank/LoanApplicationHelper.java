@@ -16,6 +16,16 @@ public class LoanApplicationHelper {
      * @return Application ID, or -1 if failed
      */
     public static int applyForLoan(int userId, double requestedAmount, String purpose) {
+        if (hasActiveLoan(userId)) {
+            System.out.println("User already has an active loan. New loan application blocked.");
+            return -1;
+        }
+
+        if (hasPendingApplication(userId)) {
+            System.out.println("User already has a pending loan application. New loan application blocked.");
+            return -1;
+        }
+
         String query = "SELECT apply_for_loan(?, ?, ?)";
         try (Connection conn = DB.connect();
              CallableStatement stmt = conn.prepareCall("{? = call apply_for_loan(?, ?, ?)}")) {
@@ -75,6 +85,27 @@ public class LoanApplicationHelper {
      */
     public static int approveLoanApplication(int appId, int adminId, double approvedAmount) {
         try (Connection conn = DB.connect()) {
+            // Get applicant details before approving so we can block new loans for users who still owe money.
+            String getAppQuery = "SELECT user_id, requested_amount FROM loan_applications WHERE id=?";
+            int userId = 0;
+            double loanAmount = approvedAmount;
+            try (PreparedStatement stmt = conn.prepareStatement(getAppQuery)) {
+                stmt.setInt(1, appId);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        userId = rs.getInt("user_id");
+                        if (loanAmount <= 0) {
+                            loanAmount = rs.getDouble("requested_amount");
+                        }
+                    }
+                }
+            }
+
+            if (userId > 0 && hasActiveLoan(userId)) {
+                System.out.println("Cannot approve loan application: user still has an active loan.");
+                return -1;
+            }
+
             // Update loan_applications: set status to approved, set amount, set admin_id
             String updateAppQuery = "UPDATE loan_applications SET status='approved', admin_id=?, " +
                                    "approved_at=NOW(), approved_amount=? WHERE id=?";
@@ -83,20 +114,6 @@ public class LoanApplicationHelper {
                 stmt.setDouble(2, approvedAmount);
                 stmt.setInt(3, appId);
                 stmt.executeUpdate();
-            }
-            
-            // Get applicant details to create a loan record
-            String getAppQuery = "SELECT user_id, approved_amount FROM loan_applications WHERE id=?";
-            int userId = 0;
-            double loanAmount = 0;
-            try (PreparedStatement stmt = conn.prepareStatement(getAppQuery)) {
-                stmt.setInt(1, appId);
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        userId = rs.getInt("user_id");
-                        loanAmount = rs.getDouble("approved_amount");
-                    }
-                }
             }
             
             // Create a loan record in loans table if one doesn't exist
@@ -213,6 +230,28 @@ public class LoanApplicationHelper {
         try (Connection conn = DB.connect();
              PreparedStatement stmt = conn.prepareStatement(query)) {
             
+            stmt.setInt(1, userId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    /**
+     * Check if user has any active loan that must be paid before applying again.
+     * @param userId User ID
+     * @return true if an active loan exists
+     */
+    public static boolean hasActiveLoan(int userId) {
+        String query = "SELECT COUNT(*) FROM loans WHERE user_id = ? AND status = 'active' AND COALESCE(remaining_balance, 0) > 0";
+        try (Connection conn = DB.connect();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
             stmt.setInt(1, userId);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
