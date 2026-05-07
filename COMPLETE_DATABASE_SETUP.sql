@@ -82,9 +82,9 @@ CREATE TABLE IF NOT EXISTS loans (
 CREATE TABLE IF NOT EXISTS loan_applications (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
-  requested_amount DECIMAL(12,2),
-  loan_amount DECIMAL(12,2),
-  purpose VARCHAR(255),
+  requested_amount DECIMAL(12,2) DEFAULT 0,
+  loan_amount DECIMAL(12,2) DEFAULT 0,
+  purpose VARCHAR(255) DEFAULT '',
   full_name VARCHAR(255) NOT NULL,
   date_of_birth DATE NOT NULL,
   gender VARCHAR(20) NOT NULL,
@@ -92,9 +92,9 @@ CREATE TABLE IF NOT EXISTS loan_applications (
   contact_number VARCHAR(30) NOT NULL,
   email_address VARCHAR(255) NOT NULL,
   employment_status VARCHAR(100) NOT NULL,
-  company_name VARCHAR(255),
+  company_name VARCHAR(255) DEFAULT '',
   monthly_income DECIMAL(12,2) NOT NULL,
-  work_address VARCHAR(255),
+  work_address VARCHAR(255) DEFAULT '',
   loan_amount_requested DECIMAL(12,2) NOT NULL,
   loan_purpose VARCHAR(255) NOT NULL,
   loan_term_months INT NOT NULL DEFAULT 6,
@@ -105,19 +105,30 @@ CREATE TABLE IF NOT EXISTS loan_applications (
   proof_of_address_submitted BOOLEAN DEFAULT FALSE,
   declaration_accepted BOOLEAN DEFAULT TRUE,
   status VARCHAR(50) DEFAULT 'pending',
-  admin_id INT,
-  admin_notes VARCHAR(255),
-  approved_amount DECIMAL(12,2),
-  rejection_reason VARCHAR(255),
+  admin_id INT DEFAULT NULL,
+  admin_notes VARCHAR(255) DEFAULT '',
+  approved_amount DECIMAL(12,2) DEFAULT 0,
+  rejection_reason VARCHAR(255) DEFAULT '',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   reviewed_at TIMESTAMP NULL,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- Compatibility columns for older query paths
-ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS requested_amount DECIMAL(12,2) NULL;
-ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS loan_amount DECIMAL(12,2) NULL;
-ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS purpose VARCHAR(255) NULL;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS requested_amount DECIMAL(12,2) DEFAULT 0;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS loan_amount DECIMAL(12,2) DEFAULT 0;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS purpose VARCHAR(255) DEFAULT '';
+
+-- Modify existing columns to have defaults (for strict mode compatibility)
+ALTER TABLE loan_applications MODIFY COLUMN requested_amount DECIMAL(12,2) DEFAULT 0;
+ALTER TABLE loan_applications MODIFY COLUMN loan_amount DECIMAL(12,2) DEFAULT 0;
+ALTER TABLE loan_applications MODIFY COLUMN purpose VARCHAR(255) DEFAULT '';
+ALTER TABLE loan_applications MODIFY COLUMN company_name VARCHAR(255) DEFAULT '';
+ALTER TABLE loan_applications MODIFY COLUMN work_address VARCHAR(255) DEFAULT '';
+ALTER TABLE loan_applications MODIFY COLUMN admin_id INT DEFAULT NULL;
+ALTER TABLE loan_applications MODIFY COLUMN admin_notes VARCHAR(255) DEFAULT '';
+ALTER TABLE loan_applications MODIFY COLUMN approved_amount DECIMAL(12,2) DEFAULT 0;
+ALTER TABLE loan_applications MODIFY COLUMN rejection_reason VARCHAR(255) DEFAULT '';
 
 UPDATE loan_applications
 SET loan_amount = COALESCE(loan_amount, loan_amount_requested, requested_amount),

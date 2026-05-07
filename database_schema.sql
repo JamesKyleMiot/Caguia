@@ -133,9 +133,9 @@ CREATE TABLE IF NOT EXISTS password_reset_requests (
 CREATE TABLE IF NOT EXISTS loan_applications (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
-  requested_amount DOUBLE,
-  loan_amount DOUBLE,
-  purpose VARCHAR(255),
+  requested_amount DOUBLE DEFAULT 0,
+  loan_amount DOUBLE DEFAULT 0,
+  purpose VARCHAR(255) DEFAULT '',
   date_of_birth DATE,
   gender VARCHAR(20),
   address VARCHAR(255),
@@ -169,9 +169,9 @@ CREATE TABLE IF NOT EXISTS loan_applications (
 -- Migration support for older databases (safe if columns already exist)
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255) NULL;
 
-ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS requested_amount DOUBLE NULL;
-ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS loan_amount DOUBLE NULL;
-ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS purpose VARCHAR(255) NULL;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS requested_amount DOUBLE DEFAULT 0;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS loan_amount DOUBLE DEFAULT 0;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS purpose VARCHAR(255) DEFAULT '';
 ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS date_of_birth DATE NULL;
 ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS gender VARCHAR(20) NULL;
 ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS address VARCHAR(255) NULL;
@@ -179,9 +179,9 @@ ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS contact_number VARCHAR(30
 ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS email_address VARCHAR(255) NULL;
 ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS full_name VARCHAR(255) NULL;
 ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS employment_status VARCHAR(50) NULL;
-ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS company_name VARCHAR(255) NULL;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS company_name VARCHAR(255) DEFAULT '';
 ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS monthly_income DOUBLE NULL;
-ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS work_address VARCHAR(255) NULL;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS work_address VARCHAR(255) DEFAULT '';
 ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS loan_amount_requested DOUBLE NULL;
 ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS loan_purpose VARCHAR(255) NULL;
 ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS loan_term_months INT NULL;
@@ -191,6 +191,13 @@ ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS valid_id_submitted BOOLEA
 ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS proof_of_income_submitted BOOLEAN DEFAULT FALSE;
 ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS proof_of_address_submitted BOOLEAN DEFAULT FALSE;
 ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS declaration_accepted BOOLEAN DEFAULT TRUE;
+
+-- Modify existing columns to have defaults (for strict mode compatibility)
+ALTER TABLE loan_applications MODIFY COLUMN requested_amount DOUBLE DEFAULT 0;
+ALTER TABLE loan_applications MODIFY COLUMN loan_amount DOUBLE DEFAULT 0;
+ALTER TABLE loan_applications MODIFY COLUMN purpose VARCHAR(255) DEFAULT '';
+ALTER TABLE loan_applications MODIFY COLUMN company_name VARCHAR(255) DEFAULT '';
+ALTER TABLE loan_applications MODIFY COLUMN work_address VARCHAR(255) DEFAULT '';
 
 -- Backfill mirror fields for compatibility between old/new code paths
 UPDATE loan_applications
