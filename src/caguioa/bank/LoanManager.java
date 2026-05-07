@@ -38,6 +38,7 @@ public class LoanManager {
         
         // Ensure loan_applications table has all required columns
         ensureColumn(conn, "loan_applications", "requested_amount", "ALTER TABLE loan_applications ADD COLUMN requested_amount DOUBLE NULL AFTER user_id");
+        ensureColumn(conn, "loan_applications", "loan_amount", "ALTER TABLE loan_applications ADD COLUMN loan_amount DOUBLE NULL AFTER requested_amount");
         ensureColumn(conn, "loan_applications", "purpose", "ALTER TABLE loan_applications ADD COLUMN purpose VARCHAR(255) NULL AFTER requested_amount");
         ensureColumn(conn, "loan_applications", "full_name", "ALTER TABLE loan_applications ADD COLUMN full_name VARCHAR(255) NULL AFTER rejection_reason");
         ensureColumn(conn, "loan_applications", "date_of_birth", "ALTER TABLE loan_applications ADD COLUMN date_of_birth DATE NULL AFTER full_name");
@@ -62,11 +63,12 @@ public class LoanManager {
         // Keep old/new amount/purpose columns in sync for compatibility.
         try (PreparedStatement pst = conn.prepareStatement(
                 "UPDATE loan_applications SET " +
+                "loan_amount = COALESCE(loan_amount, loan_amount_requested, requested_amount), " +
                 "loan_amount_requested = COALESCE(loan_amount_requested, requested_amount), " +
                 "requested_amount = COALESCE(requested_amount, loan_amount_requested), " +
                 "loan_purpose = COALESCE(loan_purpose, purpose), " +
                 "purpose = COALESCE(purpose, loan_purpose) " +
-                "WHERE loan_amount_requested IS NULL OR requested_amount IS NULL OR loan_purpose IS NULL OR purpose IS NULL")) {
+                "WHERE loan_amount IS NULL OR loan_amount_requested IS NULL OR requested_amount IS NULL OR loan_purpose IS NULL OR purpose IS NULL")) {
             pst.executeUpdate();
         } catch (Exception e) {
             System.out.println("Error syncing loan application compatibility columns: " + e);
@@ -88,6 +90,7 @@ public class LoanManager {
                 "  id INT AUTO_INCREMENT PRIMARY KEY," +
                 "  user_id INT NOT NULL," +
                 "  requested_amount DOUBLE," +
+                "  loan_amount DOUBLE," +
                 "  purpose VARCHAR(255)," +
                 "  status VARCHAR(50) DEFAULT 'pending'," +
                 "  admin_id INT," +

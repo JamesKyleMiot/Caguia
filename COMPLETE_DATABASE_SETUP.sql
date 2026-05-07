@@ -83,6 +83,7 @@ CREATE TABLE IF NOT EXISTS loan_applications (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
   requested_amount DECIMAL(12,2),
+  loan_amount DECIMAL(12,2),
   purpose VARCHAR(255),
   full_name VARCHAR(255) NOT NULL,
   date_of_birth DATE NOT NULL,
@@ -115,12 +116,14 @@ CREATE TABLE IF NOT EXISTS loan_applications (
 
 -- Compatibility columns for older query paths
 ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS requested_amount DECIMAL(12,2) NULL;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS loan_amount DECIMAL(12,2) NULL;
 ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS purpose VARCHAR(255) NULL;
 
 UPDATE loan_applications
-SET requested_amount = COALESCE(requested_amount, loan_amount_requested),
+SET loan_amount = COALESCE(loan_amount, loan_amount_requested, requested_amount),
+    requested_amount = COALESCE(requested_amount, loan_amount_requested, loan_amount),
     purpose = COALESCE(purpose, loan_purpose)
-WHERE requested_amount IS NULL OR purpose IS NULL;
+WHERE loan_amount IS NULL OR requested_amount IS NULL OR purpose IS NULL;
 
 -- ============================================================
 -- 6. LOAN PAYMENTS TABLE

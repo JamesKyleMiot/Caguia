@@ -134,6 +134,7 @@ CREATE TABLE IF NOT EXISTS loan_applications (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
   requested_amount DOUBLE,
+  loan_amount DOUBLE,
   purpose VARCHAR(255),
   date_of_birth DATE,
   gender VARCHAR(20),
@@ -169,6 +170,7 @@ CREATE TABLE IF NOT EXISTS loan_applications (
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255) NULL;
 
 ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS requested_amount DOUBLE NULL;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS loan_amount DOUBLE NULL;
 ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS purpose VARCHAR(255) NULL;
 ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS date_of_birth DATE NULL;
 ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS gender VARCHAR(20) NULL;
@@ -192,11 +194,12 @@ ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS declaration_accepted BOOL
 
 -- Backfill mirror fields for compatibility between old/new code paths
 UPDATE loan_applications
-SET loan_amount_requested = COALESCE(loan_amount_requested, requested_amount),
+SET loan_amount = COALESCE(loan_amount, loan_amount_requested, requested_amount),
+    loan_amount_requested = COALESCE(loan_amount_requested, requested_amount, loan_amount),
     requested_amount = COALESCE(requested_amount, loan_amount_requested),
     loan_purpose = COALESCE(loan_purpose, purpose),
     purpose = COALESCE(purpose, loan_purpose)
-WHERE loan_amount_requested IS NULL OR requested_amount IS NULL OR loan_purpose IS NULL OR purpose IS NULL;
+WHERE loan_amount IS NULL OR loan_amount_requested IS NULL OR requested_amount IS NULL OR loan_purpose IS NULL OR purpose IS NULL;
 
 -- loan_payments table (Track all payments with payment method)
 CREATE TABLE IF NOT EXISTS loan_payments (

@@ -390,9 +390,9 @@ public class LoanApplicationDialog extends JFrame {
         try (Connection conn = DB.connect();
              PreparedStatement pst = conn.prepareStatement(
                  "INSERT INTO loan_applications (user_id, full_name, date_of_birth, gender, address, contact_number, email_address, " +
-                     "employment_status, company_name, monthly_income, work_address, loan_amount_requested, loan_purpose, loan_term_months, " +
+                     "employment_status, company_name, monthly_income, work_address, loan_amount, loan_amount_requested, requested_amount, loan_purpose, purpose, loan_term_months, " +
                      "account_number, account_type, valid_id_submitted, proof_of_income_submitted, proof_of_address_submitted, declaration_accepted, status) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')"
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')"
              )) {
             pst.setInt(1, userId);
             pst.setString(2, fullNameField.getText().trim());
@@ -406,14 +406,17 @@ public class LoanApplicationDialog extends JFrame {
             pst.setDouble(10, Double.parseDouble(monthlyIncomeField.getText().trim().replace(",", "")));
             pst.setString(11, workAddressField.getText().trim());
             pst.setDouble(12, requestedAmount);
-            pst.setString(13, loanPurposeField.getText().trim());
-            pst.setInt(14, Integer.parseInt(loanTermField.getText().trim()));
-            pst.setString(15, accountNumberField.getText().trim());
-            pst.setString(16, (String) accountTypeCombo.getSelectedItem());
-            pst.setBoolean(17, validIDCheckbox.isSelected());
-            pst.setBoolean(18, proofOfIncomeCheckbox.isSelected());
-            pst.setBoolean(19, proofOfAddressCheckbox.isSelected());
-            pst.setBoolean(20, declarationCheckbox.isSelected());
+            pst.setDouble(13, requestedAmount);
+            pst.setDouble(14, requestedAmount);
+            pst.setString(15, loanPurposeField.getText().trim());
+            pst.setString(16, loanPurposeField.getText().trim());
+            pst.setInt(17, Integer.parseInt(loanTermField.getText().trim()));
+            pst.setString(18, accountNumberField.getText().trim());
+            pst.setString(19, (String) accountTypeCombo.getSelectedItem());
+            pst.setBoolean(20, validIDCheckbox.isSelected());
+            pst.setBoolean(21, proofOfIncomeCheckbox.isSelected());
+            pst.setBoolean(22, proofOfAddressCheckbox.isSelected());
+            pst.setBoolean(23, declarationCheckbox.isSelected());
             pst.executeUpdate();
 
             String receipt = buildReceipt(requestedAmount, interestCharge, totalPayable, dueDate);
