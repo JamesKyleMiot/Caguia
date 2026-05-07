@@ -55,6 +55,9 @@ public class LoanApplicationDialog extends JFrame {
         super("Loan Application Form");
         this.userId = userId;
 
+        // Ensure loan-related tables/columns are available before loading form data.
+        LoanManager.ensureLoanSystemSchema();
+
         initializeUI();
         loadAutoFillData();
 

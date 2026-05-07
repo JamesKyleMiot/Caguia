@@ -5,9 +5,20 @@ import java.util.*;
 
 public class LoanManager {
 
+    public static void ensureLoanSystemSchema() {
+        try (Connection conn = DB.connect()) {
+            if (conn != null) {
+                ensureLoanSchema(conn);
+            }
+        } catch (Exception e) {
+            System.out.println("Error ensuring loan system schema: " + e);
+        }
+    }
+
     private static void ensureLoanSchema(Connection conn) {
         // First, ensure the loans table exists
         ensureLoanTableExists(conn);
+        ensureLoanApplicationsTableExists(conn);
         ensureColumn(conn, "loans", "interest_rate", "ALTER TABLE loans ADD COLUMN interest_rate DOUBLE DEFAULT 0.02 AFTER amount");
         ensureColumn(conn, "loans", "total_payable", "ALTER TABLE loans ADD COLUMN total_payable DOUBLE AFTER interest_rate");
         ensureColumn(conn, "loans", "remaining_balance", "ALTER TABLE loans ADD COLUMN remaining_balance DOUBLE DEFAULT 0 AFTER total_payable");
@@ -26,10 +37,40 @@ public class LoanManager {
         ensureColumn(conn, "loan_payments", "transaction_id", "ALTER TABLE loan_payments ADD COLUMN transaction_id INT NULL AFTER transaction_reference");
         
         // Ensure loan_applications table has all required columns
+        ensureColumn(conn, "loan_applications", "requested_amount", "ALTER TABLE loan_applications ADD COLUMN requested_amount DOUBLE NULL AFTER user_id");
+        ensureColumn(conn, "loan_applications", "purpose", "ALTER TABLE loan_applications ADD COLUMN purpose VARCHAR(255) NULL AFTER requested_amount");
         ensureColumn(conn, "loan_applications", "full_name", "ALTER TABLE loan_applications ADD COLUMN full_name VARCHAR(255) NULL AFTER rejection_reason");
+        ensureColumn(conn, "loan_applications", "date_of_birth", "ALTER TABLE loan_applications ADD COLUMN date_of_birth DATE NULL AFTER full_name");
+        ensureColumn(conn, "loan_applications", "gender", "ALTER TABLE loan_applications ADD COLUMN gender VARCHAR(20) NULL AFTER date_of_birth");
+        ensureColumn(conn, "loan_applications", "address", "ALTER TABLE loan_applications ADD COLUMN address VARCHAR(255) NULL AFTER gender");
+        ensureColumn(conn, "loan_applications", "contact_number", "ALTER TABLE loan_applications ADD COLUMN contact_number VARCHAR(30) NULL AFTER address");
+        ensureColumn(conn, "loan_applications", "email_address", "ALTER TABLE loan_applications ADD COLUMN email_address VARCHAR(255) NULL AFTER contact_number");
         ensureColumn(conn, "loan_applications", "employment_status", "ALTER TABLE loan_applications ADD COLUMN employment_status VARCHAR(50) NULL AFTER full_name");
+        ensureColumn(conn, "loan_applications", "company_name", "ALTER TABLE loan_applications ADD COLUMN company_name VARCHAR(255) NULL AFTER employment_status");
         ensureColumn(conn, "loan_applications", "monthly_income", "ALTER TABLE loan_applications ADD COLUMN monthly_income DOUBLE NULL AFTER employment_status");
+        ensureColumn(conn, "loan_applications", "work_address", "ALTER TABLE loan_applications ADD COLUMN work_address VARCHAR(255) NULL AFTER monthly_income");
+        ensureColumn(conn, "loan_applications", "loan_amount_requested", "ALTER TABLE loan_applications ADD COLUMN loan_amount_requested DOUBLE NULL AFTER work_address");
+        ensureColumn(conn, "loan_applications", "loan_purpose", "ALTER TABLE loan_applications ADD COLUMN loan_purpose VARCHAR(255) NULL AFTER loan_amount_requested");
         ensureColumn(conn, "loan_applications", "loan_term_months", "ALTER TABLE loan_applications ADD COLUMN loan_term_months INT NULL AFTER monthly_income");
+        ensureColumn(conn, "loan_applications", "account_number", "ALTER TABLE loan_applications ADD COLUMN account_number VARCHAR(100) NULL AFTER loan_term_months");
+        ensureColumn(conn, "loan_applications", "account_type", "ALTER TABLE loan_applications ADD COLUMN account_type VARCHAR(100) NULL AFTER account_number");
+        ensureColumn(conn, "loan_applications", "valid_id_submitted", "ALTER TABLE loan_applications ADD COLUMN valid_id_submitted BOOLEAN DEFAULT FALSE AFTER account_type");
+        ensureColumn(conn, "loan_applications", "proof_of_income_submitted", "ALTER TABLE loan_applications ADD COLUMN proof_of_income_submitted BOOLEAN DEFAULT FALSE AFTER valid_id_submitted");
+        ensureColumn(conn, "loan_applications", "proof_of_address_submitted", "ALTER TABLE loan_applications ADD COLUMN proof_of_address_submitted BOOLEAN DEFAULT FALSE AFTER proof_of_income_submitted");
+        ensureColumn(conn, "loan_applications", "declaration_accepted", "ALTER TABLE loan_applications ADD COLUMN declaration_accepted BOOLEAN DEFAULT TRUE AFTER proof_of_address_submitted");
+
+        // Keep old/new amount/purpose columns in sync for compatibility.
+        try (PreparedStatement pst = conn.prepareStatement(
+                "UPDATE loan_applications SET " +
+                "loan_amount_requested = COALESCE(loan_amount_requested, requested_amount), " +
+                "requested_amount = COALESCE(requested_amount, loan_amount_requested), " +
+                "loan_purpose = COALESCE(loan_purpose, purpose), " +
+                "purpose = COALESCE(purpose, loan_purpose) " +
+                "WHERE loan_amount_requested IS NULL OR requested_amount IS NULL OR loan_purpose IS NULL OR purpose IS NULL")) {
+            pst.executeUpdate();
+        } catch (Exception e) {
+            System.out.println("Error syncing loan application compatibility columns: " + e);
+        }
 
         // Backfill remaining balance for old active rows after column migrations.
         try (PreparedStatement pst = conn.prepareStatement(
@@ -38,6 +79,48 @@ public class LoanManager {
             pst.executeUpdate();
         } catch (Exception e) {
             System.out.println("Error backfilling remaining_balance: " + e);
+        }
+    }
+
+    private static void ensureLoanApplicationsTableExists(Connection conn) {
+        try (PreparedStatement pst = conn.prepareStatement(
+                "CREATE TABLE IF NOT EXISTS loan_applications (" +
+                "  id INT AUTO_INCREMENT PRIMARY KEY," +
+                "  user_id INT NOT NULL," +
+                "  requested_amount DOUBLE," +
+                "  purpose VARCHAR(255)," +
+                "  status VARCHAR(50) DEFAULT 'pending'," +
+                "  admin_id INT," +
+                "  admin_notes VARCHAR(255)," +
+                "  approved_amount DOUBLE," +
+                "  rejection_reason VARCHAR(255)," +
+                "  full_name VARCHAR(255)," +
+                "  date_of_birth DATE," +
+                "  gender VARCHAR(20)," +
+                "  address VARCHAR(255)," +
+                "  contact_number VARCHAR(30)," +
+                "  email_address VARCHAR(255)," +
+                "  employment_status VARCHAR(100)," +
+                "  company_name VARCHAR(255)," +
+                "  monthly_income DOUBLE," +
+                "  work_address VARCHAR(255)," +
+                "  loan_amount_requested DOUBLE," +
+                "  loan_purpose VARCHAR(255)," +
+                "  loan_term_months INT," +
+                "  account_number VARCHAR(100)," +
+                "  account_type VARCHAR(100)," +
+                "  valid_id_submitted BOOLEAN DEFAULT FALSE," +
+                "  proof_of_income_submitted BOOLEAN DEFAULT FALSE," +
+                "  proof_of_address_submitted BOOLEAN DEFAULT FALSE," +
+                "  declaration_accepted BOOLEAN DEFAULT TRUE," +
+                "  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+                "  reviewed_at TIMESTAMP NULL," +
+                "  expires_at TIMESTAMP NULL," +
+                "  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE" +
+                ") ENGINE=InnoDB")) {
+            pst.executeUpdate();
+        } catch (Exception e) {
+            System.out.println("Error creating loan_applications table: " + e);
         }
     }
     
