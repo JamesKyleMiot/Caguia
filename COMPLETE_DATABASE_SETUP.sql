@@ -426,6 +426,351 @@ BEGIN
 END//
 DELIMITER ;
 
+-- ============================================
+-- PERFORMANCE INDEXES
+-- ============================================
+CREATE INDEX IF NOT EXISTS idx_loan_applications_user ON loan_applications(user_id);
+CREATE INDEX IF NOT EXISTS idx_loan_applications_status ON loan_applications(status);
+CREATE INDEX IF NOT EXISTS idx_loan_payments_loan ON loan_payments(loan_id);
+CREATE INDEX IF NOT EXISTS idx_loan_payments_user ON loan_payments(user_id);
+CREATE INDEX IF NOT EXISTS idx_loan_receipts_payment ON loan_receipts(payment_id);
+CREATE INDEX IF NOT EXISTS idx_loan_penalties_loan ON loan_penalties(loan_id);
+CREATE INDEX IF NOT EXISTS idx_loan_penalties_paid ON loan_penalties(paid);
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_transactions_user ON transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_loans_user ON loans(user_id);
+CREATE INDEX IF NOT EXISTS idx_loans_status ON loans(status);
+CREATE INDEX IF NOT EXISTS idx_messages_user ON user_messages(user_id);
+
+-- ============================================
+-- HELPER PROCEDURES (utilizing indexes)
+-- ============================================
+
+-- Procedure: Get all pending loan applications (uses idx_loan_applications_status)
+DELIMITER //
+DROP PROCEDURE IF EXISTS get_pending_applications//
+CREATE PROCEDURE get_pending_applications()
+BEGIN
+  SELECT la.id, la.user_id, la.full_name, la.email_address, la.contact_number,
+         la.loan_amount_requested, la.loan_purpose, la.employment_status, 
+         la.monthly_income, la.loan_term_months, la.created_at
+  FROM loan_applications la
+  WHERE la.status = 'pending'
+  ORDER BY la.created_at ASC;
+END//
+DELIMITER ;
+
+-- Procedure: Get pending applications for a specific user (uses idx_loan_applications_user + status)
+DELIMITER //
+DROP PROCEDURE IF EXISTS get_user_pending_applications//
+CREATE PROCEDURE get_user_pending_applications(IN p_user_id INT)
+BEGIN
+  SELECT la.id, la.full_name, la.loan_amount_requested, la.loan_purpose, 
+         la.status, la.created_at, la.reviewed_at, la.rejection_reason
+  FROM loan_applications la
+  WHERE la.user_id = p_user_id AND la.status = 'pending'
+  ORDER BY la.created_at DESC;
+END//
+DELIMITER ;
+
+-- Procedure: Get approved loan applications for a specific user
+DELIMITER //
+DROP PROCEDURE IF EXISTS get_user_approved_applications//
+CREATE PROCEDURE get_user_approved_applications(IN p_user_id INT)
+BEGIN
+  SELECT la.id, la.full_name, la.loan_amount_requested, la.approved_amount,
+         la.loan_purpose, la.status, la.created_at, la.reviewed_at
+  FROM loan_applications la
+  WHERE la.user_id = p_user_id AND la.status = 'approved'
+  ORDER BY la.reviewed_at DESC;
+END//
+DELIMITER ;
+
+-- Procedure: Get all active loans for a user (uses idx_loans_user + status)
+DELIMITER //
+DROP PROCEDURE IF EXISTS get_user_active_loans_detail//
+CREATE PROCEDURE get_user_active_loans_detail(IN p_user_id INT)
+BEGIN
+  SELECT l.id, l.amount, l.interest_rate, l.total_payable, l.remaining_balance,
+         l.due_date, l.status, l.created_at,
+         (SELECT COUNT(*) FROM loan_payments WHERE loan_id = l.id) as payment_count,
+         (SELECT COALESCE(SUM(payment_amount), 0) FROM loan_payments WHERE loan_id = l.id) as total_paid
+  FROM loans l
+  WHERE l.user_id = p_user_id AND l.status = 'active'
+  ORDER BY l.created_at DESC;
+END//
+DELIMITER ;
+
+-- Procedure: Get all paid loans for a user
+DELIMITER //
+DROP PROCEDURE IF EXISTS get_user_paid_loans//
+CREATE PROCEDURE get_user_paid_loans(IN p_user_id INT)
+BEGIN
+  SELECT l.id, l.amount, l.total_payable, l.due_date, l.status, l.created_at,
+         (SELECT COALESCE(SUM(payment_amount), 0) FROM loan_payments WHERE loan_id = l.id) as total_paid
+  FROM loans l
+  WHERE l.user_id = p_user_id AND l.status = 'paid'
+  ORDER BY l.created_at DESC;
+END//
+DELIMITER ;
+
+-- Procedure: Get overdue loans (uses idx_loans_status)
+DELIMITER //
+DROP PROCEDURE IF EXISTS get_overdue_loans//
+CREATE PROCEDURE get_overdue_loans()
+BEGIN
+  SELECT l.id, l.user_id, u.fullname, u.email, u.username,
+         l.amount, l.total_payable, l.remaining_balance, l.due_date,
+         DATEDIFF(CURDATE(), l.due_date) as days_overdue
+  FROM loans l
+  JOIN users u ON l.user_id = u.id
+  WHERE l.status = 'active' AND l.due_date < CURDATE()
+  ORDER BY l.due_date ASC;
+END//
+DELIMITER ;
+
+-- Procedure: Get overdue loans for a specific user
+DELIMITER //
+DROP PROCEDURE IF EXISTS get_user_overdue_loans//
+CREATE PROCEDURE get_user_overdue_loans(IN p_user_id INT)
+BEGIN
+  SELECT l.id, l.amount, l.remaining_balance, l.due_date,
+         DATEDIFF(CURDATE(), l.due_date) as days_overdue,
+         CEIL(l.remaining_balance * 0.05 * CEIL(DATEDIFF(CURDATE(), l.due_date) / 30)) as estimated_penalty
+  FROM loans l
+  WHERE l.user_id = p_user_id AND l.status = 'active' AND l.due_date < CURDATE()
+  ORDER BY l.due_date ASC;
+END//
+DELIMITER ;
+
+-- Procedure: Get all payments for a specific loan (uses idx_loan_payments_loan)
+DELIMITER //
+DROP PROCEDURE IF EXISTS get_loan_payments_detail//
+CREATE PROCEDURE get_loan_payments_detail(IN p_loan_id INT)
+BEGIN
+  SELECT lp.id, lp.payment_amount, lp.payment_method, lp.payment_status,
+         lp.transaction_reference, lp.paid_date,
+         lr.receipt_number, lr.previous_balance, lr.new_balance
+  FROM loan_payments lp
+  LEFT JOIN loan_receipts lr ON lp.id = lr.payment_id
+  WHERE lp.loan_id = p_loan_id
+  ORDER BY lp.paid_date DESC;
+END//
+DELIMITER ;
+
+-- Procedure: Get all payments by user (uses idx_loan_payments_user)
+DELIMITER //
+DROP PROCEDURE IF EXISTS get_user_payments_detail//
+CREATE PROCEDURE get_user_payments_detail(IN p_user_id INT)
+BEGIN
+  SELECT lp.id, lp.loan_id, l.amount, lp.payment_amount, lp.payment_method,
+         lp.payment_status, lp.paid_date,
+         lr.receipt_number, l.remaining_balance
+  FROM loan_payments lp
+  JOIN loans l ON lp.loan_id = l.id
+  LEFT JOIN loan_receipts lr ON lp.id = lr.payment_id
+  WHERE lp.user_id = p_user_id
+  ORDER BY lp.paid_date DESC;
+END//
+DELIMITER ;
+
+-- Procedure: Get all penalties for a loan (uses idx_loan_penalties_loan)
+DELIMITER //
+DROP PROCEDURE IF EXISTS get_loan_penalties_detail//
+CREATE PROCEDURE get_loan_penalties_detail(IN p_loan_id INT)
+BEGIN
+  SELECT lp.id, lp.penalty_amount, lp.penalty_reason, lp.due_date, lp.paid,
+         lp.created_at
+  FROM loan_penalties lp
+  WHERE lp.loan_id = p_loan_id
+  ORDER BY lp.created_at DESC;
+END//
+DELIMITER ;
+
+-- Procedure: Get unpaid penalties for a user
+DELIMITER //
+DROP PROCEDURE IF EXISTS get_user_unpaid_penalties//
+CREATE PROCEDURE get_user_unpaid_penalties(IN p_user_id INT)
+BEGIN
+  SELECT lp.id, lp.loan_id, lp.penalty_amount, lp.penalty_reason, lp.due_date,
+         (SELECT fullname FROM users WHERE id = p_user_id) as user_name
+  FROM loan_penalties lp
+  WHERE lp.user_id = p_user_id AND lp.paid = FALSE
+  ORDER BY lp.due_date ASC;
+END//
+DELIMITER ;
+
+-- Procedure: Get total penalties owed by user
+DELIMITER //
+DROP PROCEDURE IF EXISTS get_user_total_penalties//
+CREATE PROCEDURE get_user_total_penalties(IN p_user_id INT)
+BEGIN
+  SELECT 
+    (SELECT COALESCE(SUM(penalty_amount), 0) FROM loan_penalties WHERE user_id = p_user_id AND paid = FALSE) as unpaid_penalties,
+    (SELECT COALESCE(SUM(penalty_amount), 0) FROM loan_penalties WHERE user_id = p_user_id AND paid = TRUE) as paid_penalties,
+    (SELECT COALESCE(SUM(penalty_amount), 0) FROM loan_penalties WHERE user_id = p_user_id) as total_penalties;
+END//
+DELIMITER ;
+
+-- Procedure: Get loan receipts for a user (uses idx_loan_receipts_payment)
+DELIMITER //
+DROP PROCEDURE IF EXISTS get_user_receipts//
+CREATE PROCEDURE get_user_receipts(IN p_user_id INT)
+BEGIN
+  SELECT lr.id, lr.receipt_number, lr.loan_id, lr.amount_paid, 
+         lr.previous_balance, lr.new_balance, lr.payment_method, lr.generated_at
+  FROM loan_receipts lr
+  WHERE lr.user_id = p_user_id
+  ORDER BY lr.generated_at DESC;
+END//
+DELIMITER ;
+
+-- Procedure: Get receipt details by receipt number
+DELIMITER //
+DROP PROCEDURE IF EXISTS get_receipt_by_number//
+CREATE PROCEDURE get_receipt_by_number(IN p_receipt_number VARCHAR(50))
+BEGIN
+  SELECT lr.id, lr.receipt_number, lr.loan_id, lr.user_id, lr.amount_paid,
+         lr.previous_balance, lr.new_balance, lr.payment_method, 
+         lr.receipt_details, lr.generated_at,
+         u.fullname, u.email
+  FROM loan_receipts lr
+  JOIN users u ON lr.user_id = u.id
+  WHERE lr.receipt_number = p_receipt_number;
+END//
+DELIMITER ;
+
+-- Procedure: Get all transactions for a user (uses idx_transactions_user)
+DELIMITER //
+DROP PROCEDURE IF EXISTS get_user_transactions_detail//
+CREATE PROCEDURE get_user_transactions_detail(IN p_user_id INT)
+BEGIN
+  SELECT t.id, t.type, t.amount, t.method, t.created_at
+  FROM transactions t
+  WHERE t.user_id = p_user_id
+  ORDER BY t.created_at DESC;
+END//
+DELIMITER ;
+
+-- Procedure: Get unread messages for user (uses idx_messages_user)
+DELIMITER //
+DROP PROCEDURE IF EXISTS get_unread_user_messages//
+CREATE PROCEDURE get_unread_user_messages(IN p_user_id INT)
+BEGIN
+  SELECT um.id, um.subject, um.body, um.admin_id, um.created_at
+  FROM user_messages um
+  WHERE um.user_id = p_user_id AND um.is_read = FALSE
+  ORDER BY um.created_at DESC;
+END//
+DELIMITER ;
+
+-- Procedure: Dashboard stats - Pending applications count
+DELIMITER //
+DROP PROCEDURE IF EXISTS get_dashboard_pending_apps_count//
+CREATE PROCEDURE get_dashboard_pending_apps_count()
+BEGIN
+  SELECT COUNT(*) as pending_count
+  FROM loan_applications
+  WHERE status = 'pending';
+END//
+DELIMITER ;
+
+-- Procedure: Dashboard stats - Approved today
+DELIMITER //
+DROP PROCEDURE IF EXISTS get_dashboard_approved_today//
+CREATE PROCEDURE get_dashboard_approved_today()
+BEGIN
+  SELECT COUNT(*) as approved_today
+  FROM loan_applications
+  WHERE status = 'approved' AND DATE(reviewed_at) = CURDATE();
+END//
+DELIMITER ;
+
+-- Procedure: Dashboard stats - Overdue loans count
+DELIMITER //
+DROP PROCEDURE IF EXISTS get_dashboard_overdue_count//
+CREATE PROCEDURE get_dashboard_overdue_count()
+BEGIN
+  SELECT COUNT(*) as overdue_count,
+         COALESCE(SUM(remaining_balance), 0) as overdue_amount
+  FROM loans
+  WHERE status = 'active' AND due_date < CURDATE();
+END//
+DELIMITER ;
+
+-- Procedure: Dashboard stats - Total penalties unpaid
+DELIMITER //
+DROP PROCEDURE IF EXISTS get_dashboard_unpaid_penalties//
+CREATE PROCEDURE get_dashboard_unpaid_penalties()
+BEGIN
+  SELECT COUNT(*) as penalty_count,
+         COALESCE(SUM(penalty_amount), 0) as penalty_total
+  FROM loan_penalties
+  WHERE paid = FALSE;
+END//
+DELIMITER ;
+
+-- Procedure: Search user by username (uses idx_users_username)
+DELIMITER //
+DROP PROCEDURE IF EXISTS search_user_by_username//
+CREATE PROCEDURE search_user_by_username(IN p_username VARCHAR(100))
+BEGIN
+  SELECT u.id, u.username, u.fullname, u.email, u.sex, u.age, 
+         u.nationality, u.address, u.balance, u.savings, u.role, u.created_at
+  FROM users u
+  WHERE u.username = p_username;
+END//
+DELIMITER ;
+
+-- Procedure: Get user activity summary
+DELIMITER //
+DROP PROCEDURE IF EXISTS get_user_activity_summary//
+CREATE PROCEDURE get_user_activity_summary(IN p_user_id INT)
+BEGIN
+  SELECT 
+    u.id, u.fullname, u.email, u.balance, u.savings,
+    (SELECT COUNT(*) FROM loans WHERE user_id = p_user_id AND status = 'active') as active_loans,
+    (SELECT COUNT(*) FROM loans WHERE user_id = p_user_id AND status = 'paid') as completed_loans,
+    (SELECT COALESCE(SUM(remaining_balance), 0) FROM loans WHERE user_id = p_user_id AND status = 'active') as total_owed,
+    (SELECT COUNT(*) FROM transactions WHERE user_id = p_user_id) as total_transactions,
+    (SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE user_id = p_user_id) as total_transacted,
+    (SELECT COUNT(*) FROM loan_penalties WHERE user_id = p_user_id AND paid = FALSE) as unpaid_penalties,
+    (SELECT COALESCE(SUM(penalty_amount), 0) FROM loan_penalties WHERE user_id = p_user_id AND paid = FALSE) as total_unpaid_penalties,
+    (SELECT MAX(created_at) FROM transactions WHERE user_id = p_user_id) as last_transaction_date
+  FROM users u
+  WHERE u.id = p_user_id;
+END//
+DELIMITER ;
+
+-- Procedure: Mark penalties as paid
+DELIMITER //
+DROP PROCEDURE IF EXISTS mark_penalties_paid//
+CREATE PROCEDURE mark_penalties_paid(IN p_loan_id INT)
+BEGIN
+  UPDATE loan_penalties 
+  SET paid = TRUE 
+  WHERE loan_id = p_loan_id AND paid = FALSE;
+END//
+DELIMITER ;
+
+-- Procedure: Get application review history (for admin)
+DELIMITER //
+DROP PROCEDURE IF EXISTS get_application_review_history//
+CREATE PROCEDURE get_application_review_history()
+BEGIN
+  SELECT la.id, la.user_id, u.fullname, la.loan_amount_requested, 
+         la.status, la.created_at, la.reviewed_at, 
+         la.admin_notes, la.rejection_reason,
+         (SELECT fullname FROM users WHERE id = la.admin_id) as reviewed_by
+  FROM loan_applications la
+  LEFT JOIN users u ON la.user_id = u.id
+  WHERE la.status IN ('approved', 'rejected')
+  ORDER BY la.reviewed_at DESC;
+END//
+DELIMITER ;
+
+-- End of database setup
+
 -- ============================================================
 -- INDEXES
 -- ============================================================
