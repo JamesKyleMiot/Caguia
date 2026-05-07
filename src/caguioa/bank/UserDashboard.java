@@ -829,15 +829,8 @@ public class UserDashboard extends javax.swing.JFrame {
             pst.setInt(3, Session.userId);
             pst.executeUpdate();
 
-            PreparedStatement pst2 = con.prepareStatement(
-                "INSERT INTO transactions(user_id,type,amount,method) VALUES(?,?,?,?)"
-            );
-
-            pst2.setInt(1, Session.userId);
-            pst2.setString(2, "Deposit");
-            pst2.setDouble(3, depositAmount);
-            pst2.setString(4, finalMethod);
-            pst2.executeUpdate();
+            // Record transaction using TransactionManager
+            TransactionManager.recordTransaction(Session.userId, TransactionManager.TYPE_DEPOSIT, depositAmount, finalMethod);
 
             JOptionPane.showMessageDialog(this, "Deposit Successful");
 
@@ -981,15 +974,8 @@ public class UserDashboard extends javax.swing.JFrame {
             pst.setInt(2, Session.userId);
             pst.executeUpdate();
 
-            PreparedStatement pst2 = con.prepareStatement(
-                "INSERT INTO transactions(user_id,type,amount,method) VALUES(?,?,?,?)"
-            );
-
-            pst2.setInt(1, Session.userId);
-            pst2.setString(2, "Withdraw");
-            pst2.setDouble(3, withdrawAmount);
-            pst2.setString(4, finalMethod);
-            pst2.executeUpdate();
+            // Record transaction using TransactionManager
+            TransactionManager.recordTransaction(Session.userId, TransactionManager.TYPE_WITHDRAWAL, withdrawAmount, finalMethod);
 
             double newBalance = currentBalance - withdrawAmount;
 
@@ -1117,15 +1103,8 @@ public class UserDashboard extends javax.swing.JFrame {
             pst.setInt(3, Session.userId);
             pst.executeUpdate();
 
-            PreparedStatement pst2 = con.prepareStatement(
-                "INSERT INTO transactions(user_id,type,amount,method) VALUES(?,?,?,?)"
-            );
-
-            pst2.setInt(1, Session.userId);
-            pst2.setString(2, "Transfer to Savings");
-            pst2.setDouble(3, transferAmount);
-            pst2.setString(4, "Savings Transfer");
-            pst2.executeUpdate();
+            // Record transaction using TransactionManager
+            TransactionManager.recordTransaction(Session.userId, TransactionManager.TYPE_SAVINGS_TRANSFER, transferAmount, "Savings Transfer");
 
             double newBalance = currentBalance - transferAmount;
 
@@ -1200,15 +1179,8 @@ public class UserDashboard extends javax.swing.JFrame {
             pst.setInt(3, Session.userId);
             pst.executeUpdate();
 
-            PreparedStatement pst2 = con.prepareStatement(
-                "INSERT INTO transactions(user_id,type,amount,method) VALUES(?,?,?,?)"
-            );
-
-            pst2.setInt(1, Session.userId);
-            pst2.setString(2, "Withdraw Savings");
-            pst2.setDouble(3, withdrawAmount);
-            pst2.setString(4, "Savings Withdrawal");
-            pst2.executeUpdate();
+            // Record transaction using TransactionManager
+            TransactionManager.recordTransaction(Session.userId, TransactionManager.TYPE_WITHDRAWAL, withdrawAmount, "Savings Withdrawal");
 
             double newSavings = currentSavings - withdrawAmount;
 
