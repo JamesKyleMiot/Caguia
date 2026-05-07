@@ -26,27 +26,28 @@ public class LoanPaymentHelper {
      */
     public static int processLoanPayment(int loanId, int userId, double paymentAmount, 
                                          String paymentMethod, String transactionReference) {
-        try (Connection conn = DB.connect();
-             CallableStatement stmt = conn.prepareCall("{? = call process_loan_payment(?, ?, ?, ?, ?)}")) {
-            
-            stmt.registerOutParameter(1, Types.INTEGER);
-            stmt.setInt(2, loanId);
-            stmt.setInt(3, userId);
-            stmt.setDouble(4, paymentAmount);
-            stmt.setString(5, paymentMethod);
-            stmt.setString(6, transactionReference);
-            stmt.execute();
-            
-            int paymentId = stmt.getInt(1);
+        int paymentId = LoanManager.processLoanPayment(
+            loanId,
+            userId,
+            paymentAmount,
+            paymentMethod,
+            transactionReference
+        );
+
+        if (paymentId > 0) {
             System.out.println("✓ Payment processed: ID=" + paymentId + ", Amount=" + paymentAmount + 
                              ", Method=" + paymentMethod);
-            return paymentId;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return -1;
         }
+
+        return paymentId;
     }
 
+    /**
+     * Convenience wrapper for callers that only know the loan ID and amount.
+     */
+    public static boolean processLoanPayment(int loanId, double paymentAmount) {
+        return LoanManager.processLoanPayment(loanId, paymentAmount);
+    }
     /**
      * Get all payments for a loan
      * @param loanId Loan ID

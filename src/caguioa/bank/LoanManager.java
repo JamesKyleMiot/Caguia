@@ -432,6 +432,7 @@ public class LoanManager {
             }
 
             double newBalance = Math.max(0, remainingBalance - appliedAmount);
+            // Always set status to 'paid' if fully paid, otherwise 'active'
             String status = newBalance <= 0 ? "paid" : "active";
             String normalizedMethod = normalizePaymentMethod(paymentMethod);
             String normalizedReference = normalizeTransactionReference(transactionReference, loanId);

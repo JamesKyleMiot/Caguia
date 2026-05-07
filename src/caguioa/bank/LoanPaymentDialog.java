@@ -29,6 +29,9 @@ public class LoanPaymentDialog extends JDialog {
     private JButton nextBtn;
     private JButton cancelBtn;
 
+    // Transaction reference for payment (empty for walk-in, set for online)
+    private String txnRef = "";
+
     private final String[] paymentMethods = {
         "📱 Online Banking / Mobile App",
         "🏦 Bank Counter (Teller)",
@@ -680,17 +683,15 @@ public class LoanPaymentDialog extends JDialog {
                 ? paymentMethodCombo.getSelectedItem().toString()
                 : "Loan Payment";
 
-            boolean success = LoanManager.processLoanPayment(loanId, paymentAmount);
-            if (success) {
-                try (Connection conn = DB.connect();
-                     PreparedStatement transactionStmt = conn.prepareStatement(
-                         "INSERT INTO transactions (user_id, type, amount, method) VALUES (?, ?, ?, ?)")) {
-                    transactionStmt.setInt(1, userId);
-                    transactionStmt.setString(2, "Loan Payment");
-                    transactionStmt.setDouble(3, paymentAmount);
-                    transactionStmt.setString(4, paymentMethod);
-                    transactionStmt.executeUpdate();
-                }
+            int paymentId = LoanPaymentHelper.processLoanPayment(
+                loanId,
+                userId,
+                paymentAmount,
+                paymentMethod,
+                txnRef
+            );
+
+            if (paymentId > 0) {
 
                 // Generate receipt
                 String receiptNumber = generateReceiptNumber();
