@@ -82,6 +82,8 @@ CREATE TABLE IF NOT EXISTS loans (
 CREATE TABLE IF NOT EXISTS loan_applications (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
+  requested_amount DECIMAL(12,2),
+  purpose VARCHAR(255),
   full_name VARCHAR(255) NOT NULL,
   date_of_birth DATE NOT NULL,
   gender VARCHAR(20) NOT NULL,
@@ -110,6 +112,15 @@ CREATE TABLE IF NOT EXISTS loan_applications (
   reviewed_at TIMESTAMP NULL,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+-- Compatibility columns for older query paths
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS requested_amount DECIMAL(12,2) NULL;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS purpose VARCHAR(255) NULL;
+
+UPDATE loan_applications
+SET requested_amount = COALESCE(requested_amount, loan_amount_requested),
+    purpose = COALESCE(purpose, loan_purpose)
+WHERE requested_amount IS NULL OR purpose IS NULL;
 
 -- ============================================================
 -- 6. LOAN PAYMENTS TABLE
@@ -195,13 +206,13 @@ BEGIN
   DECLARE app_id INT;
 
   INSERT INTO loan_applications (
-    user_id, full_name, date_of_birth, gender, address, contact_number, email_address,
+    user_id, requested_amount, purpose, full_name, date_of_birth, gender, address, contact_number, email_address,
     employment_status, company_name, monthly_income, work_address,
     loan_amount_requested, loan_purpose, loan_term_months,
     account_number, account_type, valid_id_submitted,
     proof_of_income_submitted, proof_of_address_submitted, declaration_accepted, status
   ) VALUES (
-    p_user_id, p_full_name, p_date_of_birth, p_gender, p_address, p_contact_number, p_email_address,
+    p_user_id, p_loan_amount_requested, p_loan_purpose, p_full_name, p_date_of_birth, p_gender, p_address, p_contact_number, p_email_address,
     p_employment_status, p_company_name, p_monthly_income, p_work_address,
     p_loan_amount_requested, p_loan_purpose, COALESCE(p_loan_term_months, 6),
     p_account_number, p_account_type, p_valid_id_submitted,

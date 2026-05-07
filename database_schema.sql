@@ -133,8 +133,13 @@ CREATE TABLE IF NOT EXISTS password_reset_requests (
 CREATE TABLE IF NOT EXISTS loan_applications (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
-  requested_amount DOUBLE NOT NULL,
+  requested_amount DOUBLE,
   purpose VARCHAR(255),
+  date_of_birth DATE,
+  gender VARCHAR(20),
+  address VARCHAR(255),
+  contact_number VARCHAR(30),
+  email_address VARCHAR(255),
   status VARCHAR(50) DEFAULT 'pending',
   admin_id INT,
   admin_notes VARCHAR(255),
@@ -142,13 +147,56 @@ CREATE TABLE IF NOT EXISTS loan_applications (
   rejection_reason VARCHAR(255),
   full_name VARCHAR(255),
   employment_status VARCHAR(50),
+  company_name VARCHAR(255),
   monthly_income DOUBLE,
+  work_address VARCHAR(255),
+  loan_amount_requested DOUBLE,
+  loan_purpose VARCHAR(255),
   loan_term_months INT,
+  account_number VARCHAR(100),
+  account_type VARCHAR(100),
+  valid_id_submitted BOOLEAN DEFAULT FALSE,
+  proof_of_income_submitted BOOLEAN DEFAULT FALSE,
+  proof_of_address_submitted BOOLEAN DEFAULT FALSE,
+  declaration_accepted BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   reviewed_at TIMESTAMP NULL,
   expires_at TIMESTAMP NULL,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+-- Migration support for older databases (safe if columns already exist)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255) NULL;
+
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS requested_amount DOUBLE NULL;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS purpose VARCHAR(255) NULL;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS date_of_birth DATE NULL;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS gender VARCHAR(20) NULL;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS address VARCHAR(255) NULL;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS contact_number VARCHAR(30) NULL;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS email_address VARCHAR(255) NULL;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS full_name VARCHAR(255) NULL;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS employment_status VARCHAR(50) NULL;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS company_name VARCHAR(255) NULL;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS monthly_income DOUBLE NULL;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS work_address VARCHAR(255) NULL;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS loan_amount_requested DOUBLE NULL;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS loan_purpose VARCHAR(255) NULL;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS loan_term_months INT NULL;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS account_number VARCHAR(100) NULL;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS account_type VARCHAR(100) NULL;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS valid_id_submitted BOOLEAN DEFAULT FALSE;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS proof_of_income_submitted BOOLEAN DEFAULT FALSE;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS proof_of_address_submitted BOOLEAN DEFAULT FALSE;
+ALTER TABLE loan_applications ADD COLUMN IF NOT EXISTS declaration_accepted BOOLEAN DEFAULT TRUE;
+
+-- Backfill mirror fields for compatibility between old/new code paths
+UPDATE loan_applications
+SET loan_amount_requested = COALESCE(loan_amount_requested, requested_amount),
+    requested_amount = COALESCE(requested_amount, loan_amount_requested),
+    loan_purpose = COALESCE(loan_purpose, purpose),
+    purpose = COALESCE(purpose, loan_purpose)
+WHERE loan_amount_requested IS NULL OR requested_amount IS NULL OR loan_purpose IS NULL OR purpose IS NULL;
 
 -- loan_payments table (Track all payments with payment method)
 CREATE TABLE IF NOT EXISTS loan_payments (
@@ -214,8 +262,8 @@ CREATE FUNCTION apply_for_loan(
 ) RETURNS INT DETERMINISTIC
 BEGIN
   DECLARE app_id INT;
-  INSERT INTO loan_applications (user_id, requested_amount, purpose, status)
-  VALUES (p_user_id, p_requested_amount, p_purpose, 'pending');
+  INSERT INTO loan_applications (user_id, requested_amount, loan_amount_requested, purpose, loan_purpose, status)
+  VALUES (p_user_id, p_requested_amount, p_requested_amount, p_purpose, p_purpose, 'pending');
   SET app_id = LAST_INSERT_ID();
   RETURN app_id;
 END//
