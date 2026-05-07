@@ -74,19 +74,62 @@ public class LoanApplicationHelper {
      * @return Loan ID, or -1 if failed
      */
     public static int approveLoanApplication(int appId, int adminId, double approvedAmount) {
-        try (Connection conn = DB.connect();
-             CallableStatement stmt = conn.prepareCall("{? = call approve_loan_application(?, ?, ?)}")) {
+        try (Connection conn = DB.connect()) {
+            // Update loan_applications: set status to approved, set amount, set admin_id
+            String updateAppQuery = "UPDATE loan_applications SET status='approved', admin_id=?, " +
+                                   "approved_at=NOW(), approved_amount=? WHERE id=?";
+            try (PreparedStatement stmt = conn.prepareStatement(updateAppQuery)) {
+                stmt.setInt(1, adminId);
+                stmt.setDouble(2, approvedAmount);
+                stmt.setInt(3, appId);
+                stmt.executeUpdate();
+            }
             
-            stmt.registerOutParameter(1, Types.INTEGER);
-            stmt.setInt(2, appId);
-            stmt.setInt(3, adminId);
-            stmt.setDouble(4, approvedAmount);
-            stmt.execute();
+            // Get applicant details to create a loan record
+            String getAppQuery = "SELECT user_id, approved_amount FROM loan_applications WHERE id=?";
+            int userId = 0;
+            double loanAmount = 0;
+            try (PreparedStatement stmt = conn.prepareStatement(getAppQuery)) {
+                stmt.setInt(1, appId);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        userId = rs.getInt("user_id");
+                        loanAmount = rs.getDouble("approved_amount");
+                    }
+                }
+            }
             
-            int loanId = stmt.getInt(1);
+            // Create a loan record in loans table if one doesn't exist
+            String createLoanQuery = "INSERT INTO loans (user_id, amount, remaining_balance, status, created_at) " +
+                                    "VALUES (?, ?, ?, 'active', NOW())";
+            int loanId = -1;
+            try (PreparedStatement stmt = conn.prepareStatement(createLoanQuery, Statement.RETURN_GENERATED_KEYS)) {
+                stmt.setInt(1, userId);
+                stmt.setDouble(2, loanAmount);
+                stmt.setDouble(3, loanAmount);
+                stmt.executeUpdate();
+                
+                try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        loanId = generatedKeys.getInt(1);
+                    }
+                }
+            }
+            
+            // Record transaction for loan approval
+            if (userId > 0 && loanAmount > 0) {
+                String txnQuery = "INSERT INTO transactions (user_id, type, amount, method) VALUES (?, 'Loan Disbursement', ?, 'Loan Approval')";
+                try (PreparedStatement stmt = conn.prepareStatement(txnQuery)) {
+                    stmt.setInt(1, userId);
+                    stmt.setDouble(2, loanAmount);
+                    stmt.executeUpdate();
+                }
+            }
+            
             System.out.println("✓ Loan approved: ID=" + loanId + ", Amount=" + approvedAmount);
             return loanId;
         } catch (SQLException e) {
+            System.err.println("❌ Error approving application: " + e.getMessage());
             e.printStackTrace();
             return -1;
         }
@@ -100,18 +143,21 @@ public class LoanApplicationHelper {
      * @return true if successful
      */
     public static boolean rejectLoanApplication(int appId, int adminId, String reason) {
-        try (Connection conn = DB.connect();
-             CallableStatement stmt = conn.prepareCall("{? = call reject_loan_application(?, ?, ?)}")) {
-            
-            stmt.registerOutParameter(1, Types.INTEGER);
-            stmt.setInt(2, appId);
-            stmt.setInt(3, adminId);
-            stmt.setString(4, reason);
-            stmt.execute();
+        try (Connection conn = DB.connect()) {
+            // Update loan_applications: set status to rejected
+            String updateAppQuery = "UPDATE loan_applications SET status='rejected', admin_id=?, " +
+                                   "rejected_at=NOW(), rejection_reason=? WHERE id=?";
+            try (PreparedStatement stmt = conn.prepareStatement(updateAppQuery)) {
+                stmt.setInt(1, adminId);
+                stmt.setString(2, reason);
+                stmt.setInt(3, appId);
+                stmt.executeUpdate();
+            }
             
             System.out.println("✓ Loan application rejected: " + reason);
             return true;
         } catch (SQLException e) {
+            System.err.println("❌ Error rejecting application: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
