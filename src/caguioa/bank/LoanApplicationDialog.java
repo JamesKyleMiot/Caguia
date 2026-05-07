@@ -1,6 +1,7 @@
 package caguioa.bank;
 
 import java.awt.*;
+import java.sql.DatabaseMetaData;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -230,7 +231,7 @@ public class LoanApplicationDialog extends JFrame {
         
         gbc.gridx = 1;
         gbc.weightx = 1;
-        gbc.anchor = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.WEST;
         field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
         panel.add(field, gbc);
     }
@@ -494,34 +495,43 @@ public class LoanApplicationDialog extends JFrame {
             fullNameField.setText(Session.fullname);
         }
 
-        try (Connection con = DB.connect();
-             PreparedStatement pst = con.prepareStatement(
-                 "SELECT fullname, email, sex, address FROM users WHERE id = ?"
-             )) {
-            pst.setInt(1, userId);
-            try (ResultSet rs = pst.executeQuery()) {
-                if (rs.next()) {
-                    String fullname = rs.getString("fullname");
-                    String email = rs.getString("email");
-                    String sex = rs.getString("sex");
-                    String address = rs.getString("address");
+        try (Connection con = DB.connect()) {
+            String emailColumn = hasColumn(con, "users", "email") ? "email" : (hasColumn(con, "users", "email_address") ? "email_address" : null);
+            String query = "SELECT fullname, sex, address" + (emailColumn == null ? "" : ", " + emailColumn + " AS email") + " FROM users WHERE id = ?";
 
-                    if (fullname != null && !fullname.isBlank()) {
-                        fullNameField.setText(fullname);
-                    }
-                    if (email != null && !email.isBlank()) {
-                        emailField.setText(email);
-                    }
-                    if (sex != null && !sex.isBlank()) {
-                        genderCombo.setSelectedItem(sex);
-                    }
-                    if (address != null && !address.isBlank()) {
-                        addressField.setText(address);
+            try (PreparedStatement pst = con.prepareStatement(query)) {
+                pst.setInt(1, userId);
+                try (ResultSet rs = pst.executeQuery()) {
+                    if (rs.next()) {
+                        String fullname = rs.getString("fullname");
+                        String email = rs.getString("email");
+                        String sex = rs.getString("sex");
+                        String address = rs.getString("address");
+
+                        if (fullname != null && !fullname.isBlank()) {
+                            fullNameField.setText(fullname);
+                        }
+                        if (email != null && !email.isBlank()) {
+                            emailField.setText(email);
+                        }
+                        if (sex != null && !sex.isBlank()) {
+                            genderCombo.setSelectedItem(sex);
+                        }
+                        if (address != null && !address.isBlank()) {
+                            addressField.setText(address);
+                        }
                     }
                 }
             }
         } catch (Exception e) {
             System.out.println("Error auto-filling loan application form: " + e);
+        }
+    }
+
+    private boolean hasColumn(Connection con, String tableName, String columnName) throws Exception {
+        DatabaseMetaData meta = con.getMetaData();
+        try (ResultSet columns = meta.getColumns(con.getCatalog(), null, tableName, columnName)) {
+            return columns.next();
         }
     }
 
