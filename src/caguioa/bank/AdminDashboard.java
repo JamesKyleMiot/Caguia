@@ -759,24 +759,22 @@ public class AdminDashboard extends javax.swing.JFrame {
 
             Connection con = DB.connect();
             PreparedStatement rejectPst = con.prepareStatement(
-                "SELECT reject_loan_application(?, ?, ?) AS result"
+                "UPDATE loan_applications SET status='rejected', admin_id=?, rejected_at=NOW(), rejection_reason=? WHERE id=?"
             );
-            rejectPst.setInt(1, applicationId);
-            rejectPst.setInt(2, Session.adminId);
-            rejectPst.setString(3, reason);
-            ResultSet rs = rejectPst.executeQuery();
+            rejectPst.setInt(1, Session.adminId);
+            rejectPst.setString(2, reason);
+            rejectPst.setInt(3, applicationId);
+            rejectPst.executeUpdate();
 
-            if (rs.next()) {
-                JOptionPane.showMessageDialog(dialog,
-                    "✓ Application rejected\n\n" +
-                    "Reason: " + reason,
-                    "Rejection Complete",
-                    JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(dialog,
+                "✓ Application rejected\n\n" +
+                "Reason: " + reason,
+                "Rejection Complete",
+                JOptionPane.INFORMATION_MESSAGE);
 
-                // Refresh
-                openLoanApplicationsDialog();
-                dialog.dispose();
-            }
+            // Refresh
+            openLoanApplicationsDialog();
+            dialog.dispose();
         } catch (Exception e) {
             System.out.println("Error rejecting application: " + e);
             JOptionPane.showMessageDialog(dialog, "Error rejecting application: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
