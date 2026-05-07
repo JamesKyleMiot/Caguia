@@ -1599,10 +1599,10 @@ try {
             return;
         }
 
-        String[] options = {"Online Payment", "Walk-in Payment", "Cancel"};
+        String[] options = {"Walk-in Payment", "Online Payment", "Cancel"};
         int choice = JOptionPane.showOptionDialog(
             this,
-            "Choose how you want to pay your loan.\n\nOnline payment uses bank app / digital transfer.\nWalk-in payment uses branch or payment center instructions.",
+            "Choose how you want to pay your loan.\n\nWalk-in payment uses bank app / digital transfer.\nOnline payment uses branch or payment center instructions.",
             "Pay Loan",
             JOptionPane.DEFAULT_OPTION,
             JOptionPane.QUESTION_MESSAGE,
@@ -1612,9 +1612,9 @@ try {
         );
 
         if (choice == 0) {
-            new OnlineLoanPaymentDialog(this, Session.userId).setVisible(true);
-        } else if (choice == 1) {
             new LoanPaymentDialog(this, Session.userId).setVisible(true);
+        } else if (choice == 1) {
+            new OnlineLoanPaymentDialog(this, Session.userId).setVisible(true);
         }
     }
 
