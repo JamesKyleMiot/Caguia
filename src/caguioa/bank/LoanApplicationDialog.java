@@ -11,7 +11,7 @@ import java.time.format.DateTimeParseException;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
-public class LoanApplicationDialog extends JDialog {
+public class LoanApplicationDialog extends JFrame {
 
     private static final double INTEREST_RATE = 0.02;
     private static final int REPAYMENT_WINDOW_DAYS = 30;
@@ -51,7 +51,7 @@ public class LoanApplicationDialog extends JDialog {
     private JButton cancelBtn;
 
     public LoanApplicationDialog(Frame owner, int userId) {
-        super(owner, "Loan Application Form", true);
+        super("Loan Application Form");
         this.userId = userId;
 
         initializeUI();
@@ -60,6 +60,8 @@ public class LoanApplicationDialog extends JDialog {
         pack();
         setMinimumSize(new Dimension(760, 720));
         setPreferredSize(new Dimension(920, 980));
+        setResizable(true);
+        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setLocationRelativeTo(owner);
     }
 
@@ -197,8 +199,6 @@ public class LoanApplicationDialog extends JDialog {
         mainPanel.add(buttonPanel, BorderLayout.SOUTH);
 
         setContentPane(mainPanel);
-        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-        setResizable(true);
         
         // Setup listeners
         submitBtn.addActionListener(e -> submitApplication());
