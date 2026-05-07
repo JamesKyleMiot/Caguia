@@ -100,13 +100,18 @@ public class LoanApplicationHelper {
             }
             
             // Create a loan record in loans table if one doesn't exist
-            String createLoanQuery = "INSERT INTO loans (user_id, amount, remaining_balance, status, created_at) " +
-                                    "VALUES (?, ?, ?, 'active', NOW())";
+            double interestRate = 5.0; // Default 5% interest
+            double totalPayable = loanAmount + (loanAmount * interestRate / 100);
+            
+            String createLoanQuery = "INSERT INTO loans (user_id, amount, interest_rate, total_payable, remaining_balance, status, created_at) " +
+                                    "VALUES (?, ?, ?, ?, ?, 'active', NOW())";
             int loanId = -1;
             try (PreparedStatement stmt = conn.prepareStatement(createLoanQuery, Statement.RETURN_GENERATED_KEYS)) {
                 stmt.setInt(1, userId);
                 stmt.setDouble(2, loanAmount);
-                stmt.setDouble(3, loanAmount);
+                stmt.setDouble(3, interestRate);
+                stmt.setDouble(4, totalPayable);
+                stmt.setDouble(5, totalPayable);
                 stmt.executeUpdate();
                 
                 try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
